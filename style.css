@@ -1,0 +1,2024 @@
+body{background:#080808;color:#eee;font-family:Arial,sans-serif;text-align:center}#menu,#game{margin:20px auto;width:1320px;background:#161616;padding:20px;border-radius:15px;border:2px solid #444}#game{display:none}#rulesBox,#bestiaryBox,#classSelect{display:none;width:820px;margin:15px auto;text-align:left;line-height:1.6;background:#101010;padding:15px;border-radius:10px;border:1px solid #555}#classSelect{text-align:center}#mainArea{display:flex;justify-content:center;align-items:flex-start;gap:20px}#map{display:grid;grid-template-columns:repeat(19,40px);gap:0;background:#050505;border:2px solid #050505;box-shadow:0 0 18px rgba(0,0,0,.55)}.cell{width:40px;height:40px;line-height:40px;font-size:18px;border-radius:0;position:relative;overflow:visible;box-sizing:border-box}.floor{background:#3b3328}.room{background:#4a3b2a}.treasure{background:#6b4a1f}.wall{background:#050505}.fog{background:#5b5b5b;color:#bbb}.player{background:#2563eb}.monster{background:#7f1d1d}.mercenary{background:#7c2d12}.elite{background:#991b1b;box-shadow:0 0 10px #ef4444}.chest{background:#92400e}.exit{background:#4c1d95}.merchant{background:#ca8a04}.potion{background:#166534}#sidePanel{width:400px}#log{background:#030303;width:380px;height:120px;overflow-y:auto;text-align:left;padding:10px;border:1px solid #555;border-radius:8px}#actionPanel{display:none;background:#151515;border:1px solid #555;border-radius:10px;padding:12px;margin-top:12px}button{padding:9px 13px;margin:4px;font-size:15px;cursor:pointer;border-radius:8px;border:none}.bigButton{font-size:22px;padding:14px 30px;background:#2563eb;color:white}.danger{background:#7f1d1d;color:#fff}.smallText{font-size:14px;color:#ccc}.inv{margin:8px auto;max-width:900px;color:#ddd;font-size:14px}#characterBox{display:none;background:#101010;border:1px solid #555;border-radius:10px;padding:12px;margin:10px auto;max-width:760px;text-align:left;line-height:1.6}.characterIcon{font-size:36px;text-align:center}.slot{display:inline-block;min-width:150px;margin:3px;padding:6px;border:1px solid #555;border-radius:8px;background:#1f1f1f}
+#deathScreen{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;justify-content:center;align-items:center}.deathBox{background:#161616;border:2px solid #7f1d1d;border-radius:15px;padding:30px;min-width:400px}.deathBox h1{color:#ef4444;}
+
+.cell.hitEnemy{animation:hitEnemy .28s ease-in-out;}
+.cell.hitPlayer{animation:hitPlayer .28s ease-in-out;}
+@keyframes hitEnemy{
+  0%{transform:translateX(0);filter:none;}
+  20%{transform:translateX(-3px);background:#ef4444;filter:brightness(1.8);}
+  40%{transform:translateX(3px);background:#ef4444;filter:brightness(1.8);}
+  60%{transform:translateX(-2px);background:#ef4444;filter:brightness(1.5);}
+  80%{transform:translateX(2px);background:#ef4444;filter:brightness(1.3);}
+  100%{transform:translateX(0);filter:none;}
+}
+@keyframes hitPlayer{
+  0%{transform:translateX(0);filter:none;}
+  20%{transform:translateX(-4px);background:#dc2626;filter:brightness(2);}
+  40%{transform:translateX(4px);background:#dc2626;filter:brightness(2);}
+  60%{transform:translateX(-3px);background:#dc2626;filter:brightness(1.5);}
+  80%{transform:translateX(3px);background:#dc2626;filter:brightness(1.2);}
+  100%{transform:translateX(0);filter:none;}
+}
+
+/* Более живые логи */
+.logLine{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.logCrit{color:#ef4444;font-weight:700;text-shadow:0 0 6px rgba(239,68,68,.75);}
+.logPlayer{color:#22c55e;font-weight:700;}
+.logGold{color:#facc15;font-weight:700;}
+.logHpPlus{color:#22c55e;font-weight:700;}
+.logHpMinus{color:#ef4444;font-weight:700;}
+.logEnemy{color:#fb923c;font-weight:700;}
+.logBonus{color:#a78bfa;font-weight:700;}
+#log hr{border:0;border-top:1px solid #555;margin:6px 0;}
+
+/* Тряска экрана смерти при появлении */
+#deathScreen.show .deathBox{animation:deathPopShake .42s ease-out;}
+@keyframes deathPopShake{
+  0%{transform:scale(.75) rotate(0deg);opacity:0;}
+  20%{transform:scale(1.08) rotate(-2deg);opacity:1;}
+  40%{transform:scale(1.02) rotate(2deg);}
+  60%{transform:scale(1.04) rotate(-1deg);}
+  80%{transform:scale(1.01) rotate(1deg);}
+  100%{transform:scale(1) rotate(0deg);opacity:1;}
+}
+.diffTable{width:100%;border-collapse:collapse;margin:8px 0 10px 0;background:#171717}
+.diffTable th,.diffTable td{border:1px solid #444;padding:6px;text-align:center}
+.diffTable th{background:#222;color:#ddd}
+
+
+/* Направление взгляда героя и плавное появление после шага */
+.heroIcon{display:inline-block;position:relative;z-index:2;}
+.facingArrow{position:absolute;right:-8px;top:-8px;font-size:13px;z-index:5;filter:drop-shadow(0 0 3px #000);}
+.player.moveFromLeft .heroIcon{animation:stepFromLeft .17s ease-out;}
+.player.moveFromRight .heroIcon{animation:stepFromRight .17s ease-out;}
+.player.moveFromTop .heroIcon{animation:stepFromTop .17s ease-out;}
+.player.moveFromBottom .heroIcon{animation:stepFromBottom .17s ease-out;}
+@keyframes stepFromLeft{0%{transform:translateX(-40px);opacity:.55}100%{transform:translateX(0);opacity:1}}
+@keyframes stepFromRight{0%{transform:translateX(40px);opacity:.55}100%{transform:translateX(0);opacity:1}}
+@keyframes stepFromTop{0%{transform:translateY(-40px);opacity:.55}100%{transform:translateY(0);opacity:1}}
+@keyframes stepFromBottom{0%{transform:translateY(40px);opacity:.55}100%{transform:translateY(0);opacity:1}}
+
+
+/* Бесшовная карта: проходы больше не выглядят как отдельные плитки */
+.floor,.room,.treasure,.wall,.fog,.player,.monster,.mercenary,.elite,.chest,.exit,.merchant,.potion{
+  border-radius:0;
+}
+.floor{
+  background:#3b3328;
+  box-shadow:inset 0 0 10px rgba(0,0,0,.14);
+}
+.room{
+  background:#453727;
+  box-shadow:inset 0 0 10px rgba(0,0,0,.12);
+}
+.treasure{
+  background:#65461f;
+  box-shadow:inset 0 0 10px rgba(0,0,0,.12);
+}
+.wall{
+  background:#050505;
+  box-shadow:none;
+}
+.fog{
+  background:rgba(88,88,88,.92);
+  box-shadow:inset 0 0 12px rgba(0,0,0,.25);
+}
+.player,.monster,.mercenary,.elite,.chest,.exit,.merchant,.potion{
+  box-shadow:inset 0 0 10px rgba(0,0,0,.22);
+}
+
+/* FIX: entities are transparent-style sprites over the floor, not colored tiles */
+.player,
+.monster,
+.mercenary,
+.elite,
+.chest,
+.exit,
+.merchant,
+.potion{
+  background:#3b3328 !important;
+  box-shadow:inset 0 0 10px rgba(0,0,0,.14) !important;
+}
+
+.wall{
+  background:#1b1209 !important;
+}
+
+.player .heroIcon,
+.player .facingArrow,
+.monster,
+.mercenary,
+.elite,
+.chest,
+.exit,
+.merchant,
+.potion{
+  text-shadow:0 1px 2px rgba(0,0,0,.85);
+}
+
+/* Настоящие спрайты Soldier/Orc поверх клетки */
+.spriteImg{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:58px;
+  height:58px;
+  transform:translate(-50%,-70%);
+  object-fit:contain;
+  pointer-events:none;
+  z-index:4;
+  image-rendering:auto;
+  background:transparent !important;
+  filter:drop-shadow(0 3px 2px rgba(0,0,0,.65));
+}
+.orcSprite{width:58px;height:58px;}
+.soldierSprite{width:58px;height:58px;}
+.eliteSprite{filter:drop-shadow(0 0 6px rgba(239,68,68,.95)) drop-shadow(0 3px 2px rgba(0,0,0,.75));}
+.player .facingArrow{z-index:8;}
+.player,.mercenary,.monster,.elite{overflow:visible;}
+
+/* Movement animation applies to real sprite images too, not only emoji icon */
+.player.moveFromLeft .spriteImg{animation:stepFromLeft .17s ease-out;}
+.player.moveFromRight .spriteImg{animation:stepFromRight .17s ease-out;}
+.player.moveFromTop .spriteImg{animation:stepFromTop .17s ease-out;}
+.player.moveFromBottom .spriteImg{animation:stepFromBottom .17s ease-out;}
+
+
+/* FIX: спрайт не должен съезжать при движении + зеркалирование героя */
+.player{ --sprite-flip: 1; }
+.player.facingLeft{ --sprite-flip: -1; }
+.player.facingRight{ --sprite-flip: 1; }
+
+.spriteImg{
+  transform:translate(-50%,-70%) scaleX(var(--sprite-flip, 1)) !important;
+  transform-origin:center center;
+}
+
+.player.moveFromLeft .spriteImg{animation:spriteStepFromLeft .17s ease-out !important;}
+.player.moveFromRight .spriteImg{animation:spriteStepFromRight .17s ease-out !important;}
+.player.moveFromTop .spriteImg{animation:spriteStepFromTop .17s ease-out !important;}
+.player.moveFromBottom .spriteImg{animation:spriteStepFromBottom .17s ease-out !important;}
+
+@keyframes spriteStepFromLeft{
+  0%{transform:translate(calc(-50% - 40px),-70%) scaleX(var(--sprite-flip, 1));opacity:.55;}
+  100%{transform:translate(-50%,-70%) scaleX(var(--sprite-flip, 1));opacity:1;}
+}
+@keyframes spriteStepFromRight{
+  0%{transform:translate(calc(-50% + 40px),-70%) scaleX(var(--sprite-flip, 1));opacity:.55;}
+  100%{transform:translate(-50%,-70%) scaleX(var(--sprite-flip, 1));opacity:1;}
+}
+@keyframes spriteStepFromTop{
+  0%{transform:translate(-50%,calc(-70% - 40px)) scaleX(var(--sprite-flip, 1));opacity:.55;}
+  100%{transform:translate(-50%,-70%) scaleX(var(--sprite-flip, 1));opacity:1;}
+}
+@keyframes spriteStepFromBottom{
+  0%{transform:translate(-50%,calc(-70% + 40px)) scaleX(var(--sprite-flip, 1));opacity:.55;}
+  100%{transform:translate(-50%,-70%) scaleX(var(--sprite-flip, 1));opacity:1;}
+}
+
+/* FINAL sprite positioning fix: stable wrapper, no shrinking, no walking while idle */
+.spriteWrap{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:78px;
+  height:78px;
+  transform:translate(-50%,-70%) scaleX(var(--sprite-flip,1));
+  transform-origin:center center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:6;
+  pointer-events:none;
+  background:transparent!important;
+  overflow:visible;
+  filter:drop-shadow(0 3px 2px rgba(0,0,0,.65));
+}
+.spriteImg{
+  position:static!important;
+  left:auto!important;
+  top:auto!important;
+  width:72px!important;
+  height:72px!important;
+  max-width:none!important;
+  max-height:none!important;
+  transform:none!important;
+  object-fit:contain;
+  pointer-events:none;
+  z-index:6;
+  image-rendering:auto;
+  background:transparent!important;
+  filter:none!important;
+}
+.spriteWrap.state-idle .spriteImg{ width:66px!important; height:66px!important; }
+.spriteWrap.state-walk .spriteImg{ width:72px!important; height:72px!important; }
+.spriteWrap.state-attack .spriteImg{ width:86px!important; height:86px!important; }
+.spriteWrap.state-hurt .spriteImg{ width:72px!important; height:72px!important; }
+.player.facingLeft{ --sprite-flip:-1; }
+.player.facingRight{ --sprite-flip:1; }
+
+/* Animate the wrapper, not the image, so the sprite does not drift down-right */
+.player.moveFromLeft .spriteWrap{animation:spriteWrapStepFromLeft .18s ease-out!important;}
+.player.moveFromRight .spriteWrap{animation:spriteWrapStepFromRight .18s ease-out!important;}
+.player.moveFromTop .spriteWrap{animation:spriteWrapStepFromTop .18s ease-out!important;}
+.player.moveFromBottom .spriteWrap{animation:spriteWrapStepFromBottom .18s ease-out!important;}
+@keyframes spriteWrapStepFromLeft{
+  0%{transform:translate(calc(-50% - 40px),-70%) scaleX(var(--sprite-flip,1));opacity:.65;}
+  100%{transform:translate(-50%,-70%) scaleX(var(--sprite-flip,1));opacity:1;}
+}
+@keyframes spriteWrapStepFromRight{
+  0%{transform:translate(calc(-50% + 40px),-70%) scaleX(var(--sprite-flip,1));opacity:.65;}
+  100%{transform:translate(-50%,-70%) scaleX(var(--sprite-flip,1));opacity:1;}
+}
+@keyframes spriteWrapStepFromTop{
+  0%{transform:translate(-50%,calc(-70% - 40px)) scaleX(var(--sprite-flip,1));opacity:.65;}
+  100%{transform:translate(-50%,-70%) scaleX(var(--sprite-flip,1));opacity:1;}
+}
+@keyframes spriteWrapStepFromBottom{
+  0%{transform:translate(-50%,calc(-70% + 40px)) scaleX(var(--sprite-flip,1));opacity:.65;}
+  100%{transform:translate(-50%,-70%) scaleX(var(--sprite-flip,1));opacity:1;}
+}
+
+/* QUALITY FIX: use pre-upscaled sprite files at natural size, no browser stretching */
+.spriteWrap{
+  width:auto!important;
+  height:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  overflow:visible!important;
+  transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1))!important;
+  transform-origin:center center!important;
+}
+.spriteImg{
+  width:auto!important;
+  height:auto!important;
+  max-width:none!important;
+  max-height:none!important;
+  object-fit:initial!important;
+  image-rendering:pixelated!important;
+  transform:none!important;
+}
+.spriteWrap.state-idle .spriteImg,
+.spriteWrap.state-walk .spriteImg,
+.spriteWrap.state-attack .spriteImg,
+.spriteWrap.state-hurt .spriteImg,
+.spriteWrap.state-death .spriteImg{
+  width:auto!important;
+  height:auto!important;
+}
+.spriteWrap.monsterFacingLeft{ --sprite-flip:-1; }
+.spriteWrap.monsterFacingRight{ --sprite-flip:1; }
+
+/* Keep movement animation centered while using natural-size sprites */
+.player.moveFromLeft .spriteWrap{animation:spriteWrapStepFromLeftNatural .18s ease-out!important;}
+.player.moveFromRight .spriteWrap{animation:spriteWrapStepFromRightNatural .18s ease-out!important;}
+.player.moveFromTop .spriteWrap{animation:spriteWrapStepFromTopNatural .18s ease-out!important;}
+.player.moveFromBottom .spriteWrap{animation:spriteWrapStepFromBottomNatural .18s ease-out!important;}
+@keyframes spriteWrapStepFromLeftNatural{
+  0%{transform:translate(calc(-50% - 40px),-72%) scaleX(var(--sprite-flip,1));opacity:.75;}
+  100%{transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1));opacity:1;}
+}
+@keyframes spriteWrapStepFromRightNatural{
+  0%{transform:translate(calc(-50% + 40px),-72%) scaleX(var(--sprite-flip,1));opacity:.75;}
+  100%{transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1));opacity:1;}
+}
+@keyframes spriteWrapStepFromTopNatural{
+  0%{transform:translate(-50%,calc(-72% - 40px)) scaleX(var(--sprite-flip,1));opacity:.75;}
+  100%{transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1));opacity:1;}
+}
+@keyframes spriteWrapStepFromBottomNatural{
+  0%{transform:translate(-50%,calc(-72% + 40px)) scaleX(var(--sprite-flip,1));opacity:.75;}
+  100%{transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1));opacity:1;}
+}
+
+
+/* MENU FIX: vertical menu panels/buttons */
+#menu{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+#menu > button,
+#classSelect button{
+  display:block;
+  width:220px;
+  margin:6px auto;
+}
+#classSelect,
+#rulesBox,
+#bestiaryBox{
+  box-sizing:border-box;
+}
+#classSelect p,
+#rulesBox p,
+#bestiaryBox p{
+  text-align:left;
+}
+
+/* SMOOTHER TILE-TO-TILE MOVEMENT */
+.player.moveFromLeft .spriteWrap{animation:spriteWrapStepFromLeftSmooth .32s cubic-bezier(.22,.75,.25,1)!important;}
+.player.moveFromRight .spriteWrap{animation:spriteWrapStepFromRightSmooth .32s cubic-bezier(.22,.75,.25,1)!important;}
+.player.moveFromTop .spriteWrap{animation:spriteWrapStepFromTopSmooth .32s cubic-bezier(.22,.75,.25,1)!important;}
+.player.moveFromBottom .spriteWrap{animation:spriteWrapStepFromBottomSmooth .32s cubic-bezier(.22,.75,.25,1)!important;}
+@keyframes spriteWrapStepFromLeftSmooth{
+  0%{transform:translate(calc(-50% - 40px),-72%) scaleX(var(--sprite-flip,1));}
+  100%{transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1));}
+}
+@keyframes spriteWrapStepFromRightSmooth{
+  0%{transform:translate(calc(-50% + 40px),-72%) scaleX(var(--sprite-flip,1));}
+  100%{transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1));}
+}
+@keyframes spriteWrapStepFromTopSmooth{
+  0%{transform:translate(-50%,calc(-72% - 40px)) scaleX(var(--sprite-flip,1));}
+  100%{transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1));}
+}
+@keyframes spriteWrapStepFromBottomSmooth{
+  0%{transform:translate(-50%,calc(-72% + 40px)) scaleX(var(--sprite-flip,1));}
+  100%{transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1));}
+}
+
+
+/* REAL SMOOTH PLAYER MOVEMENT: player sprite is an overlay, not a redrawn grid cell */
+#mapFrame{
+  position:relative;
+  width:760px;
+  height:760px;
+  flex:0 0 auto;
+}
+#map{
+  position:absolute;
+  left:0;
+  top:0;
+}
+#playerOverlay{
+  position:absolute;
+  left:20px;
+  top:20px;
+  width:0;
+  height:0;
+  z-index:50;
+  pointer-events:none;
+  transition:left .18s cubic-bezier(.22,.75,.25,1), top .18s cubic-bezier(.22,.75,.25,1);
+  --sprite-flip:1;
+}
+#playerOverlay.instantMove{
+  transition:none!important;
+}
+#playerOverlay.facingLeft{--sprite-flip:-1;}
+#playerOverlay.facingRight{--sprite-flip:1;}
+#playerOverlay .spriteWrap{
+  position:absolute!important;
+  left:0!important;
+  top:0!important;
+  transform:translate(-50%,-72%) scaleX(var(--sprite-flip,1))!important;
+  z-index:60;
+}
+#playerOverlay .heroIcon{
+  position:absolute;
+  left:0;
+  top:0;
+  transform:translate(-50%,-50%);
+  font-size:26px;
+  z-index:60;
+}
+#playerOverlay .facingArrow{
+  position:absolute;
+  left:13px;
+  top:-25px;
+  font-size:13px;
+  z-index:70;
+  filter:drop-shadow(0 0 3px #000);
+}
+#playerOverlay.playerWalking .spriteWrap.state-walk .spriteImg{
+  filter:drop-shadow(0 3px 2px rgba(0,0,0,.65));
+}
+/* Grid cell containing player should remain normal floor; overlay draws the hero */
+.cell.playerCellFloor{
+  background:#3b3328!important;
+  box-shadow:inset 0 0 10px rgba(0,0,0,.14)!important;
+}
+
+
+/* ASSET UPDATE: dungeon pixel tiles for floor/walls/chests */
+.floor,
+.playerCellFloor,
+.monster,
+.mercenary,
+.elite,
+.chest,
+.exit,
+.merchant,
+.potion{
+  background-image:url("assets/tile_floor.png") !important;
+  background-size:40px 40px !important;
+  background-repeat:no-repeat !important;
+  background-color:#3b3328 !important;
+  box-shadow:none !important;
+}
+.room{
+  background-image:url("assets/tile_room.png") !important;
+  background-size:40px 40px !important;
+  background-repeat:no-repeat !important;
+  background-color:#4a3b2a !important;
+}
+.treasure{
+  background-image:url("assets/tile_treasure.png") !important;
+  background-size:40px 40px !important;
+  background-repeat:no-repeat !important;
+  background-color:#6b4a1f !important;
+}
+.wall{
+  background-image:url("assets/tile_wall.png") !important;
+  background-size:40px 40px !important;
+  background-repeat:no-repeat !important;
+  background-color:#1b1209 !important;
+}
+.tileIcon{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:38px;
+  height:38px;
+  image-rendering:pixelated;
+  pointer-events:none;
+  z-index:5;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.65));
+}
+.skeletonSprite{
+  image-rendering:pixelated;
+}
+.spriteWrap.skeletonSprite{
+  transform:translate(-50%,-70%) scaleX(var(--sprite-flip,1))!important;
+}
+
+/* Visibility cleanup: only walls bordering paths are shown. Deep solid rock is hidden. */
+.voidWall{
+  background:#050505 !important;
+  background-image:none !important;
+  box-shadow:none !important;
+}
+
+/* Fog of war: smoke overlay, no symbol. It gently fades when a tile becomes visible. */
+.fogSmoke{
+  position:relative;
+  color:transparent !important;
+  overflow:hidden;
+}
+.fogSmoke::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:20;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 30% 35%, rgba(190,190,190,.28), transparent 32%),
+    radial-gradient(circle at 70% 65%, rgba(120,120,120,.36), transparent 34%),
+    linear-gradient(135deg, rgba(65,65,65,.74), rgba(25,25,25,.86));
+  opacity:.86;
+  animation:fogDrift 2.8s ease-in-out infinite alternate;
+}
+.fogClearing::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:30;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 40% 40%, rgba(180,180,180,.22), transparent 36%),
+    linear-gradient(135deg, rgba(70,70,70,.68), rgba(10,10,10,.7));
+  animation:fogClear .42s ease-out forwards;
+}
+@keyframes fogDrift{
+  0%{opacity:.78; transform:translate(-1px,0) scale(1.02);}
+  100%{opacity:.92; transform:translate(1px,-1px) scale(1.04);}
+}
+@keyframes fogClear{
+  0%{opacity:.9; filter:blur(0px);}
+  100%{opacity:0; filter:blur(4px);}
+}
+
+
+/* ENTITY LAYER FIX: entities are separate overlays, tiles never shake/recolor */
+#entityLayer{
+  position:absolute;
+  left:0;
+  top:0;
+  width:760px;
+  height:760px;
+  z-index:45;
+  pointer-events:none;
+  overflow:visible;
+}
+.entityOverlay{
+  position:absolute;
+  width:0;
+  height:0;
+  transform:translate(-50%,-50%);
+  z-index:45;
+  pointer-events:none;
+  overflow:visible;
+  background:transparent!important;
+}
+.entityOverlay .spriteWrap{
+  position:absolute!important;
+  left:0!important;
+  top:0!important;
+  z-index:46;
+}
+.entityEmoji{
+  position:absolute;
+  left:0;
+  top:0;
+  transform:translate(-50%,-55%);
+  font-size:24px;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.75));
+  z-index:46;
+}
+.entityOverlay .tileIcon{
+  position:absolute!important;
+  left:0!important;
+  top:0!important;
+  transform:translate(-50%,-50%)!important;
+  width:38px!important;
+  height:38px!important;
+  z-index:46;
+}
+/* Player overlay must also be transparent: no colored tile under hero */
+#playerOverlay,
+#playerOverlay .spriteWrap,
+#playerOverlay .spriteImg,
+.playerCellFloor{
+  background:transparent!important;
+}
+.cell.playerCellFloor,
+.cell.player,
+.cell.monster,
+.cell.mercenary,
+.cell.elite,
+.cell.chest,
+.cell.exit,
+.cell.merchant,
+.cell.potion{
+  background-image:url("assets/tile_floor.png")!important;
+  background-color:#3b3328!important;
+  box-shadow:none!important;
+}
+/* Hit effects now affect only entity overlays, not the floor tile */
+.entityOverlay.hitEnemy{animation:entityHitEnemy .18s ease-in-out;}
+#playerOverlay.hitPlayer{animation:entityHitPlayer .18s ease-in-out;}
+@keyframes entityHitEnemy{
+  0%{transform:translate(-50%,-50%);filter:none;}
+  25%{transform:translate(calc(-50% - 4px),-50%);filter:brightness(1.8) drop-shadow(0 0 8px #ef4444);}
+  50%{transform:translate(calc(-50% + 4px),-50%);filter:brightness(1.8) drop-shadow(0 0 8px #ef4444);}
+  75%{transform:translate(calc(-50% - 2px),-50%);filter:brightness(1.4) drop-shadow(0 0 5px #ef4444);}
+  100%{transform:translate(-50%,-50%);filter:none;}
+}
+@keyframes entityHitPlayer{
+  0%{filter:none;}
+  25%{filter:brightness(1.8) drop-shadow(0 0 8px #dc2626);}
+  50%{filter:brightness(1.8) drop-shadow(0 0 8px #dc2626);}
+  100%{filter:none;}
+}
+/* Disable old tile hit animations so cells do not move anymore */
+.cell.hitEnemy,.cell.hitPlayer{animation:none!important;}
+
+.beaconIcon{
+    font-size:30px;
+    filter:drop-shadow(0 0 8px #facc15) drop-shadow(0 0 16px #f59e0b);
+    animation:beaconPulse 1.2s ease-in-out infinite;
+}
+@keyframes beaconPulse{
+    0%,100%{transform:scale(1); opacity:.9;}
+    50%{transform:scale(1.12); opacity:1;}
+}
+
+.beaconSprite{font-size:30px;filter:drop-shadow(0 0 8px #ffd86b);}
+.fountainSprite{font-size:30px;filter:drop-shadow(0 0 8px #6bd6ff);}
+
+/* =========================================================
+   DUNGEON UI THEME PATCH — меню + вся игровая оболочка
+   ========================================================= */
+:root{
+  --bg-void:#050302;
+  --panel:#17100b;
+  --panel2:#22160d;
+  --stone:#2a2118;
+  --stone2:#3a2a1d;
+  --blood:#5a1515;
+  --blood2:#8b1e1e;
+  --gold:#d6ad57;
+  --gold2:#f2d38a;
+  --bronze:#8b642f;
+  --text:#ead9b0;
+  --muted:#b9a57d;
+  --danger:#a83226;
+  --green:#6fbf73;
+}
+
+html{min-height:100%;}
+body{
+  margin:0;
+  min-height:100vh;
+  color:var(--text)!important;
+  font-family:Georgia,'Times New Roman',serif!important;
+  text-align:center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(118,39,22,.32), transparent 30%),
+    radial-gradient(circle at 15% 85%, rgba(120,80,28,.12), transparent 26%),
+    linear-gradient(180deg,#100905 0%,#070403 45%,#020101 100%)!important;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:-1;
+  opacity:.28;
+  background-image:
+    linear-gradient(45deg, rgba(255,255,255,.025) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255,255,255,.018) 25%, transparent 25%);
+  background-size:38px 38px;
+}
+
+h1,h2,h3{
+  color:var(--gold2);
+  letter-spacing:.5px;
+  text-shadow:0 2px 0 #000,0 0 13px rgba(214,173,87,.35);
+}
+h1{font-size:42px;margin:8px 0 16px;}
+h2{font-size:28px;}
+h3{font-size:20px;}
+p{color:var(--text);}
+
+#menu,#game{
+  position:relative;
+  width:1320px;
+  margin:20px auto;
+  padding:22px!important;
+  border-radius:18px!important;
+  border:2px solid var(--bronze)!important;
+  background:
+    linear-gradient(180deg,rgba(35,22,13,.97),rgba(12,8,6,.98)),
+    repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0 2px,transparent 2px 8px)!important;
+  box-shadow:
+    0 0 0 3px rgba(0,0,0,.85),
+    inset 0 0 34px rgba(0,0,0,.75),
+    0 18px 50px rgba(0,0,0,.75),
+    0 0 30px rgba(140,76,25,.12)!important;
+}
+#menu::before,#game::before{
+  content:"";
+  position:absolute;
+  inset:7px;
+  border:1px solid rgba(242,211,138,.22);
+  border-radius:13px;
+  pointer-events:none;
+}
+
+#rulesBox,#bestiaryBox,#classSelect,#characterBox,#actionPanel,#log,.deathBox{
+  background:
+    linear-gradient(180deg,rgba(31,20,12,.98),rgba(10,7,5,.98))!important;
+  border:1px solid rgba(214,173,87,.55)!important;
+  border-radius:14px!important;
+  color:var(--text)!important;
+  box-shadow:inset 0 0 22px rgba(0,0,0,.62),0 0 18px rgba(0,0,0,.45)!important;
+}
+#rulesBox,#bestiaryBox,#classSelect{
+  width:860px!important;
+  padding:18px 22px!important;
+}
+#rulesBox p,#bestiaryBox p,#classSelect p{color:var(--text);}
+#rulesBox b,#bestiaryBox b,#classSelect b{color:var(--gold2);}
+.smallText{color:var(--muted)!important;}
+
+/* Игровые кнопки вместо офисных */
+button{
+  position:relative;
+  overflow:hidden;
+  padding:10px 15px!important;
+  margin:5px!important;
+  border-radius:10px!important;
+  border:1px solid var(--bronze)!important;
+  color:var(--gold2)!important;
+  font-family:Georgia,'Times New Roman',serif!important;
+  font-weight:700;
+  letter-spacing:.2px;
+  background:
+    linear-gradient(180deg,#51361e 0%,#2c1c10 48%,#160d08 100%)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,232,166,.22),
+    inset 0 -3px 0 rgba(0,0,0,.35),
+    0 3px 0 #080403,
+    0 0 12px rgba(214,173,87,.11)!important;
+  text-shadow:0 1px 1px #000;
+  transition:transform .08s ease,filter .12s ease,box-shadow .12s ease,border-color .12s ease;
+}
+button::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,229,154,.12),transparent);
+  transform:translateX(-130%);
+  transition:transform .35s ease;
+}
+button:hover{
+  transform:translateY(-1px);
+  border-color:var(--gold2)!important;
+  filter:brightness(1.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255,232,166,.32),
+    inset 0 -3px 0 rgba(0,0,0,.4),
+    0 4px 0 #080403,
+    0 0 18px rgba(214,173,87,.28)!important;
+}
+button:hover::after{transform:translateX(130%);}
+button:active{transform:translateY(2px);box-shadow:inset 0 2px 8px rgba(0,0,0,.55)!important;}
+button:disabled{opacity:.45;filter:grayscale(.5);cursor:not-allowed;}
+.bigButton{
+  font-size:23px!important;
+  padding:15px 34px!important;
+  border-width:2px!important;
+  background:
+    linear-gradient(180deg,#7b4a22 0%,#4a2715 45%,#21100a 100%)!important;
+  color:#ffe6a5!important;
+  text-transform:none;
+}
+.danger{
+  background:linear-gradient(180deg,#7e251f,#45100d 55%,#1c0705)!important;
+  border-color:#b84c38!important;
+  color:#ffd4c9!important;
+}
+
+/* Верхний статус игры */
+#game > p:first-of-type{
+  display:inline-block;
+  padding:10px 16px;
+  margin:4px auto 10px;
+  border:1px solid rgba(214,173,87,.45);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(40,25,14,.95),rgba(14,9,6,.95));
+  box-shadow:inset 0 0 14px rgba(0,0,0,.55),0 0 12px rgba(0,0,0,.35);
+  color:var(--muted);
+}
+#level,#hp,#maxHp,#minDamage,#maxDamage,#gold,#potions,#potionCap,#vision,#dodge,#block,#invCount{
+  color:var(--gold2);
+  font-weight:800;
+  text-shadow:0 0 6px rgba(214,173,87,.35);
+}
+#hp{color:#ff8a7a;} #gold{color:#ffd66b;} #potions{color:#8bd88e;}
+
+#mainArea{gap:24px!important;}
+#mapFrame{
+  position:relative;
+  padding:10px;
+  border:2px solid var(--bronze);
+  border-radius:14px;
+  background:
+    linear-gradient(180deg,#2d1c0f,#0c0805),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.025) 0 1px,transparent 1px 5px);
+  box-shadow:
+    inset 0 0 18px rgba(0,0,0,.8),
+    0 0 0 3px rgba(0,0,0,.85),
+    0 0 26px rgba(214,173,87,.13);
+}
+#map{
+  border:2px solid #0b0705!important;
+  background:#050302!important;
+  box-shadow:inset 0 0 22px rgba(0,0,0,.9)!important;
+}
+.cell{
+  color:#f0dec0;
+  text-shadow:0 1px 2px #000;
+}
+.floor,.cell.playerCellFloor,.cell.player,.cell.monster,.cell.mercenary,.cell.elite,.cell.chest,.cell.exit,.cell.merchant,.cell.potion{
+  background-color:#38251d!important;
+  background-image:
+    radial-gradient(circle at 30% 25%,rgba(255,210,150,.055),transparent 30%),
+    linear-gradient(135deg,rgba(85,32,28,.22),rgba(27,19,15,.72)),
+    url("assets/tile_floor.png")!important;
+  box-shadow:inset 0 0 12px rgba(0,0,0,.3)!important;
+}
+.room{
+  background-color:#432a20!important;
+  background-image:
+    radial-gradient(circle at 65% 35%,rgba(255,220,160,.06),transparent 28%),
+    linear-gradient(135deg,rgba(96,36,28,.26),rgba(34,22,16,.72)),
+    url("assets/tile_room.png")!important;
+}
+.treasure{
+  background-color:#58351d!important;
+  background-image:
+    radial-gradient(circle at 45% 40%,rgba(255,214,100,.18),transparent 32%),
+    linear-gradient(135deg,#6a3e1e,#2b1a0f),
+    url("assets/tile_treasure.png")!important;
+}
+.wall{
+  background-color:#120b07!important;
+  background-image:
+    linear-gradient(135deg,rgba(80,55,34,.28),rgba(0,0,0,.4)),
+    url("assets/tile_wall.png")!important;
+  box-shadow:inset 0 0 13px rgba(0,0,0,.85)!important;
+}
+.fog{
+  background:#080605!important;
+  background-image:
+    radial-gradient(circle at 55% 45%,rgba(120,113,100,.18),transparent 35%),
+    linear-gradient(135deg,rgba(40,38,36,.82),rgba(5,4,4,.95))!important;
+  color:#777!important;
+}
+
+#sidePanel{
+  width:410px!important;
+  background:linear-gradient(180deg,rgba(32,20,12,.55),rgba(8,5,4,.35));
+  border:1px solid rgba(214,173,87,.25);
+  border-radius:14px;
+  padding:10px;
+  box-shadow:inset 0 0 18px rgba(0,0,0,.35);
+}
+#log{
+  width:388px!important;
+  height:150px!important;
+  padding:12px!important;
+  color:#dbc797!important;
+  background:
+    linear-gradient(180deg,rgba(19,12,7,.98),rgba(5,4,3,.98))!important;
+  border-color:rgba(214,173,87,.45)!important;
+}
+.logLine{border-bottom:1px solid rgba(214,173,87,.08)!important;}
+.logCrit{color:#ff5a4a!important;text-shadow:0 0 8px rgba(255,70,55,.8)!important;}
+.logPlayer{color:#8ee38e!important;}
+.logGold{color:#ffd66b!important;}
+.logEnemy{color:#ff9b54!important;}
+.logBonus{color:#c7a5ff!important;}
+
+#actionPanel{
+  padding:14px!important;
+  margin-top:14px!important;
+  border-width:2px!important;
+}
+#panelTitle{margin-top:0;color:#ffe1a0;}
+#panelInfo{color:#d9c49a;line-height:1.45;}
+#panelButtons button{min-width:120px;}
+
+#characterBox{
+  max-width:800px!important;
+  border-width:2px!important;
+}
+.characterIcon{filter:drop-shadow(0 0 8px rgba(214,173,87,.35));}
+.slot{
+  background:linear-gradient(180deg,#2b1c11,#120b07)!important;
+  border:1px solid rgba(214,173,87,.45)!important;
+  color:#edd9a8!important;
+  box-shadow:inset 0 0 10px rgba(0,0,0,.45);
+}
+.inv{color:var(--muted)!important;}
+
+/* Управление: кнопки направления как каменные плитки */
+#game > button[onclick^="move"]{
+  min-width:48px;
+  height:44px;
+  padding:6px!important;
+  font-size:20px!important;
+  background:linear-gradient(180deg,#403128,#18100b)!important;
+}
+
+.deathBox{
+  min-width:430px!important;
+  border:2px solid #8f211a!important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(130,24,16,.32),transparent 45%),
+    linear-gradient(180deg,#24100c,#070302)!important;
+}
+.deathBox h1{color:#ff4d3d!important;text-shadow:0 0 13px rgba(255,49,49,.55),0 2px 0 #000!important;}
+
+.diffTable{
+  background:#120c08!important;
+  color:var(--text)!important;
+  border:1px solid rgba(214,173,87,.35)!important;
+}
+.diffTable th,.diffTable td{border:1px solid rgba(214,173,87,.25)!important;}
+.diffTable th{background:#2d1c10!important;color:#ffe2a0!important;}
+
+/* Стилизованный скролл */
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:#080504;}
+::-webkit-scrollbar-thumb{background:#6f4d24;border:2px solid #080504;border-radius:10px;}
+::-webkit-scrollbar-thumb:hover{background:#a77b36;}
+
+
+/* Bitcrawl interactive chest/torch visuals */
+.bitcrawlChestIcon{
+  width:34px!important;
+  height:34px!important;
+  image-rendering:pixelated;
+  filter:drop-shadow(0 3px 3px rgba(0,0,0,.75));
+}
+.bitcrawlChestIcon.chestOpening{
+  width:38px!important;
+  height:38px!important;
+  filter:drop-shadow(0 0 6px rgba(255,205,90,.55)) drop-shadow(0 3px 3px rgba(0,0,0,.85));
+}
+.bitcrawlTorchIcon{
+  width:38px!important;
+  height:44px!important;
+  transform:translate(-50%,-58%)!important;
+  image-rendering:pixelated;
+  filter:drop-shadow(0 0 7px rgba(255,176,55,.8)) drop-shadow(0 0 16px rgba(255,93,20,.45));
+}
+
+/* Immersive action-panel icons: no system emoji buttons */
+.panelTitleWithIcon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.panelTitleIcon{
+  width:28px;
+  height:28px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  vertical-align:middle;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.75));
+}
+.panelTitleIcon.torchMini{
+  width:26px;
+  height:34px;
+  filter:drop-shadow(0 0 7px rgba(255,176,55,.75));
+}
+.actionBtnIcon{
+  width:24px;
+  height:24px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  vertical-align:middle;
+  margin-right:8px;
+  transform:translateY(-1px);
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.7));
+}
+.actionBtnIcon.torchMini{
+  width:20px;
+  height:28px;
+  margin-right:9px;
+  filter:drop-shadow(0 0 6px rgba(255,176,55,.8));
+}
+.panelGlyphIcon,.actionGlyphIcon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:26px;
+  height:26px;
+  margin-right:8px;
+  border:1px solid rgba(214,173,87,.45);
+  border-radius:7px;
+  background:radial-gradient(circle at 50% 40%,rgba(105,210,255,.22),rgba(24,14,8,.9));
+  color:#dff6ff;
+  text-shadow:0 0 8px rgba(120,220,255,.65);
+  box-shadow:inset 0 0 8px rgba(255,255,255,.06),0 0 8px rgba(70,180,255,.14);
+  font-size:16px;
+}
+.panelGlyphIcon{margin-right:0;}
+#panelButtons button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+}
+
+/* Torch/fog memory patch */
+#torchHealthText,#actionsText{
+  color:var(--gold2);
+  font-weight:800;
+  text-shadow:0 0 6px rgba(214,173,87,.35);
+}
+.rememberedWall{
+  background:#070605!important;
+  background-image:none!important;
+  box-shadow:inset 0 0 14px rgba(0,0,0,.92)!important;
+  position:relative;
+}
+.rememberedWall::after{
+  content:"";
+  position:absolute;
+  inset:7px;
+  border-radius:4px;
+  background:linear-gradient(135deg,rgba(155,132,102,.24),rgba(45,34,28,.08));
+  border:1px solid rgba(178,143,88,.18);
+  box-shadow:inset 0 0 8px rgba(0,0,0,.75);
+  opacity:.72;
+}
+.rememberedExit{
+  background:#050403!important;
+  background-image:
+    radial-gradient(circle at center,rgba(116,78,170,.22),transparent 44%),
+    linear-gradient(135deg,rgba(12,8,18,.96),rgba(0,0,0,.98))!important;
+  color:#c9a7ff!important;
+  text-shadow:0 0 10px rgba(190,140,255,.65);
+  position:relative;
+}
+.rememberedExitMark{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:24px;
+  color:#d7c1ff;
+  filter:drop-shadow(0 0 7px rgba(185,132,255,.75));
+}
+
+/* FLOOR FIX: use real grey stone floor tiles from the dungeon pack.
+   No dark stripe tile and no heavy PowerPoint-like gradients on floor cells. */
+.floor,
+.cell.playerCellFloor,
+.cell.player,
+.cell.monster,
+.cell.mercenary,
+.cell.elite,
+.cell.chest,
+.cell.exit,
+.cell.merchant,
+.cell.potion{
+  background-color:#667186!important;
+  background-image:url("assets/tile_floor.png")!important;
+  background-size:40px 40px!important;
+  background-repeat:no-repeat!important;
+  box-shadow:none!important;
+}
+.room{
+  background-color:#667186!important;
+  background-image:url("assets/tile_room.png")!important;
+  background-size:40px 40px!important;
+  background-repeat:no-repeat!important;
+  box-shadow:none!important;
+}
+.treasure{
+  background-color:#697489!important;
+  background-image:url("assets/tile_treasure.png")!important;
+  background-size:40px 40px!important;
+  background-repeat:no-repeat!important;
+  box-shadow:none!important;
+}
+
+/* FLOOR/WALL VARIETY PATCH — one material, several subtle variants */
+.cell.floor,
+.cell.playerCellFloor,
+.cell.monster,
+.cell.mercenary,
+.cell.elite,
+.cell.chest,
+.cell.exit,
+.cell.merchant,
+.cell.potion{
+  background-color:#687385!important;
+  background-size:40px 40px!important;
+  background-repeat:no-repeat!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+.cell.floorPlain,
+.cell.floorPlain.playerCellFloor,
+.cell.floorPlain.monster,
+.cell.floorPlain.mercenary,
+.cell.floorPlain.elite,
+.cell.floorPlain.chest,
+.cell.floorPlain.exit,
+.cell.floorPlain.merchant,
+.cell.floorPlain.potion{
+  background-image:url("assets/tile_floor.png")!important;
+}
+.cell.floorCrackA,
+.cell.floorCrackA.playerCellFloor,
+.cell.floorCrackA.monster,
+.cell.floorCrackA.mercenary,
+.cell.floorCrackA.elite,
+.cell.floorCrackA.chest,
+.cell.floorCrackA.exit,
+.cell.floorCrackA.merchant,
+.cell.floorCrackA.potion{
+  background-image:url("assets/tile_floor_crack_a.png")!important;
+}
+.cell.floorCrackB,
+.cell.floorCrackB.playerCellFloor,
+.cell.floorCrackB.monster,
+.cell.floorCrackB.mercenary,
+.cell.floorCrackB.elite,
+.cell.floorCrackB.chest,
+.cell.floorCrackB.exit,
+.cell.floorCrackB.merchant,
+.cell.floorCrackB.potion{
+  background-image:url("assets/tile_floor_crack_b.png")!important;
+}
+.cell.floorWorn,
+.cell.floorWorn.playerCellFloor,
+.cell.floorWorn.monster,
+.cell.floorWorn.mercenary,
+.cell.floorWorn.elite,
+.cell.floorWorn.chest,
+.cell.floorWorn.exit,
+.cell.floorWorn.merchant,
+.cell.floorWorn.potion{
+  background-image:url("assets/tile_floor_worn.png")!important;
+}
+.cell.room{
+  background-color:#687385!important;
+  background-size:40px 40px!important;
+  background-repeat:no-repeat!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+.cell.room.floorPlain{background-image:url("assets/tile_floor.png")!important;}
+.cell.room.floorCrackA{background-image:url("assets/tile_floor_crack_a.png")!important;}
+.cell.room.floorCrackB{background-image:url("assets/tile_floor_crack_b.png")!important;}
+.cell.room.floorWorn{background-image:url("assets/tile_floor_worn.png")!important;}
+.cell.treasure{
+  background-color:#697489!important;
+  background-image:url("assets/tile_treasure.png")!important;
+  background-size:40px 40px!important;
+  background-repeat:no-repeat!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+.cell.wall{
+  background-color:#3f4650!important;
+  background-size:40px 40px!important;
+  background-repeat:no-repeat!important;
+  box-shadow:inset 0 0 4px rgba(0,0,0,.3)!important;
+  filter:none!important;
+}
+.cell.wallLightPlain{background-image:url("assets/tile_wall_light.png")!important;}
+.cell.wallLightCrack{background-image:url("assets/tile_wall_light_crack.png")!important;}
+.cell.wallLightWorn{background-image:url("assets/tile_wall_light_worn.png")!important;}
+/* Fallbacks if a cell does not receive a variant for any reason */
+.cell.floor:not(.floorCrackA):not(.floorCrackB):not(.floorWorn),
+.cell.room:not(.floorCrackA):not(.floorCrackB):not(.floorWorn){background-image:url("assets/tile_floor.png")!important;}
+.cell.wall:not(.wallLightCrack):not(.wallLightWorn){background-image:url("assets/tile_wall_light.png")!important;}
+/* Fog memory still shows only a silhouette, not the full wall model */
+.cell.rememberedWall{
+  background:#070605!important;
+  background-image:none!important;
+}
+
+
+/* DEPTH/VOLUME PATCH — визуальный объём прямо в игре
+   Стены выступают над полом: светлый верх, тень снизу, AO около стен. */
+.cell{
+  isolation:isolate;
+}
+.cell.wall{
+  position:relative;
+  z-index:3;
+  background-color:#505862!important;
+  filter:drop-shadow(0 5px 3px rgba(0,0,0,.42))!important;
+  box-shadow:
+    inset 0 3px 0 rgba(255,255,255,.16),
+    inset 0 -7px 8px rgba(0,0,0,.38),
+    inset 0 0 2px rgba(255,255,255,.08)!important;
+}
+.cell.wall::before{
+  content:"";
+  position:absolute;
+  left:0;right:0;top:0;
+  height:11px;
+  pointer-events:none;
+  z-index:2;
+  background:linear-gradient(180deg,rgba(228,232,242,.24),rgba(255,255,255,.07) 45%,transparent 100%);
+  mix-blend-mode:screen;
+}
+.cell.wall::after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:-5px;
+  height:10px;
+  pointer-events:none;
+  z-index:5;
+  background:linear-gradient(180deg,rgba(0,0,0,.52),rgba(0,0,0,0));
+  opacity:.9;
+}
+.cell.wallHasFloorAbove::before{height:7px;opacity:.55;}
+.cell.wallHasFloorLeft{box-shadow:inset 4px 0 5px rgba(255,255,255,.07),inset 0 3px 0 rgba(255,255,255,.14),inset 0 -7px 8px rgba(0,0,0,.38)!important;}
+.cell.wallHasFloorRight{box-shadow:inset -4px 0 5px rgba(0,0,0,.18),inset 0 3px 0 rgba(255,255,255,.14),inset 0 -7px 8px rgba(0,0,0,.38)!important;}
+
+/* Тени на полу около стен: создают эффект глубины, как на референсе. */
+.cell.floor,
+.cell.room,
+.cell.treasure,
+.cell.playerCellFloor,
+.cell.monster,
+.cell.mercenary,
+.cell.elite,
+.cell.chest,
+.cell.exit,
+.cell.merchant,
+.cell.potion{
+  position:relative;
+  z-index:1;
+}
+.cell.aoTop,
+.cell.aoLeft,
+.cell.aoRight,
+.cell.aoBottom,
+.cell.aoCornerTL,
+.cell.aoCornerTR,
+.cell.aoCornerBL,
+.cell.aoCornerBR{
+  overflow:hidden;
+}
+.cell.aoTop::before,
+.cell.aoLeft::before,
+.cell.aoRight::before,
+.cell.aoBottom::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:2;
+}
+.cell.aoTop::before{background:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,0,0,.12) 28%,transparent 58%);}
+.cell.aoBottom::before{background:linear-gradient(0deg,rgba(0,0,0,.18),transparent 42%);}
+.cell.aoLeft::before{background:linear-gradient(90deg,rgba(0,0,0,.22),transparent 38%);}
+.cell.aoRight::before{background:linear-gradient(270deg,rgba(0,0,0,.18),transparent 38%);}
+.cell.aoTop.aoLeft::before{background:radial-gradient(circle at 0 0,rgba(0,0,0,.52),transparent 47%),linear-gradient(180deg,rgba(0,0,0,.34),transparent 55%),linear-gradient(90deg,rgba(0,0,0,.18),transparent 40%);}
+.cell.aoTop.aoRight::before{background:radial-gradient(circle at 100% 0,rgba(0,0,0,.48),transparent 47%),linear-gradient(180deg,rgba(0,0,0,.34),transparent 55%),linear-gradient(270deg,rgba(0,0,0,.16),transparent 40%);}
+.cell.aoCornerTL::after,
+.cell.aoCornerTR::after,
+.cell.aoCornerBL::after,
+.cell.aoCornerBR::after{
+  content:"";
+  position:absolute;
+  width:18px;height:18px;
+  pointer-events:none;
+  z-index:2;
+  opacity:.55;
+}
+.cell.aoCornerTL::after{left:0;top:0;background:radial-gradient(circle at 0 0,rgba(0,0,0,.45),transparent 70%);}
+.cell.aoCornerTR::after{right:0;top:0;background:radial-gradient(circle at 100% 0,rgba(0,0,0,.42),transparent 70%);}
+.cell.aoCornerBL::after{left:0;bottom:0;background:radial-gradient(circle at 0 100%,rgba(0,0,0,.25),transparent 72%);}
+.cell.aoCornerBR::after{right:0;bottom:0;background:radial-gradient(circle at 100% 100%,rgba(0,0,0,.25),transparent 72%);}
+
+/* Свет от зоны светоча: не раскрывает всю карту, а делает освещённые клетки теплее и объёмнее. */
+.cell.beaconLitTile:not(.fogSmoke):not(.rememberedWall):not(.rememberedExit){
+  filter:brightness(1.08) saturate(1.08)!important;
+}
+.cell.beaconLitTile:not(.wall)::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+  background:radial-gradient(circle at center,rgba(255,185,80,.12),transparent 72%);
+}
+
+/* Силуэты стен в тумане остаются силуэтами, но тоже получают лёгкий объём, не настоящую модель стены. */
+.cell.rememberedWall::after{
+  inset:8px!important;
+  opacity:.62!important;
+  background:linear-gradient(180deg,rgba(170,150,118,.18),rgba(38,30,25,.1))!important;
+  border-color:rgba(178,143,88,.16)!important;
+}
+
+
+/* Smooth fog transitions: fog softly breathes in/out instead of snapping. */
+.cell{
+  transition: filter .26s ease, opacity .26s ease, background-color .26s ease;
+}
+.fogReturning{
+  position:relative;
+  overflow:hidden;
+}
+.fogReturning::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:55;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 45% 35%, rgba(130,130,130,.18), transparent 34%),
+    linear-gradient(135deg, rgba(35,35,35,.08), rgba(0,0,0,.86));
+  animation:fogReturn .48s ease-out forwards;
+}
+@keyframes fogReturn{
+  0%{opacity:0; filter:blur(5px);}
+  100%{opacity:1; filter:blur(0);}
+}
+.fogClearing{
+  position:relative;
+  overflow:hidden;
+}
+.fogClearing::after{
+  will-change:opacity,filter;
+}
+.fogSmoke::after,
+.rememberedWall::after,
+.rememberedExit::after{
+  will-change:opacity,transform,filter;
+}
+
+
+/* CLOUD FOG PATCH: fog is drawn as soft overlapping smoke above cells, not as hard square tiles. */
+#map{
+  overflow:hidden;
+}
+
+/* Keep tile layer readable; fog itself can bleed slightly across cell borders. */
+.cell{
+  overflow:visible;
+}
+
+/* Unknown fog becomes black ground + soft smoke blobs over it. */
+.fogSmoke{
+  background:#050505 !important;
+  background-image:none !important;
+  color:transparent !important;
+  position:relative;
+  overflow:visible !important;
+  z-index:1;
+}
+.fogSmoke::after{
+  content:"";
+  position:absolute;
+  inset:-11px;
+  z-index:22;
+  pointer-events:none;
+  border-radius:22px;
+  background:
+    radial-gradient(ellipse at 30% 35%, rgba(160,160,160,.34) 0%, rgba(92,92,92,.25) 24%, transparent 58%),
+    radial-gradient(ellipse at 72% 65%, rgba(115,115,115,.30) 0%, rgba(55,55,55,.26) 28%, transparent 62%),
+    radial-gradient(ellipse at 50% 50%, rgba(18,18,18,.90) 0%, rgba(7,7,7,.86) 52%, transparent 76%);
+  filter:blur(5px);
+  opacity:.94;
+  transform:scale(1.12);
+  animation:fogCloudDrift 3.4s ease-in-out infinite alternate;
+  mix-blend-mode:normal;
+}
+
+/* When fog clears, it dissolves like smoke, not like a square curtain. */
+.fogClearing{
+  position:relative;
+  overflow:visible !important;
+}
+.fogClearing::after{
+  content:"";
+  position:absolute;
+  inset:-13px;
+  z-index:35;
+  pointer-events:none;
+  border-radius:24px;
+  background:
+    radial-gradient(ellipse at 45% 42%, rgba(150,150,150,.30) 0%, rgba(35,35,35,.42) 38%, transparent 72%),
+    radial-gradient(ellipse at 65% 55%, rgba(20,20,20,.72) 0%, rgba(0,0,0,.62) 48%, transparent 78%);
+  filter:blur(4px);
+  animation:fogCloudClear .48s ease-out forwards;
+}
+
+/* When fog returns, smoke rolls back in over the cell. */
+.fogReturning{
+  position:relative;
+  overflow:visible !important;
+}
+.fogReturning::before{
+  content:"";
+  position:absolute;
+  inset:-13px;
+  z-index:55;
+  pointer-events:none;
+  border-radius:24px;
+  background:
+    radial-gradient(ellipse at 38% 40%, rgba(130,130,130,.24) 0%, rgba(55,55,55,.34) 36%, transparent 70%),
+    radial-gradient(ellipse at 58% 60%, rgba(10,10,10,.86) 0%, rgba(0,0,0,.78) 48%, transparent 82%);
+  filter:blur(5px);
+  animation:fogCloudReturn .52s ease-out forwards;
+}
+
+/* Remembered wall silhouettes should stay silhouettes, but with softer fog around them. */
+.rememberedWall,
+.rememberedExit{
+  overflow:visible !important;
+}
+.rememberedWall::before,
+.rememberedExit::before{
+  content:"";
+  position:absolute;
+  inset:-8px;
+  z-index:4;
+  pointer-events:none;
+  border-radius:18px;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,.10) 0%, rgba(0,0,0,.45) 60%, transparent 82%);
+  filter:blur(4px);
+}
+.rememberedWall::after,
+.rememberedExitMark{
+  z-index:8;
+}
+
+@keyframes fogCloudDrift{
+  0%{opacity:.84; transform:translate(-2px,1px) scale(1.08);}
+  100%{opacity:.98; transform:translate(2px,-2px) scale(1.16);}
+}
+@keyframes fogCloudClear{
+  0%{opacity:.95; transform:scale(1.14); filter:blur(3px);}
+  100%{opacity:0; transform:scale(1.42); filter:blur(10px);}
+}
+@keyframes fogCloudReturn{
+  0%{opacity:0; transform:scale(.78); filter:blur(10px);}
+  100%{opacity:.96; transform:scale(1.12); filter:blur(5px);}
+}
+
+/* FOG BLEED PATCH: visible tiles near darkness get a soft mist edge that spills slightly over them.
+   This removes hard square borders while keeping the tile grid readable. */
+.cell.hasFogBleed{
+  overflow:visible!important;
+}
+.fogBleedLayer{
+  position:absolute;
+  pointer-events:none;
+  z-index:38;
+  inset:0;
+  overflow:visible;
+}
+.fogBleed{
+  position:absolute;
+  pointer-events:none;
+  opacity:.82;
+  filter:blur(7px);
+  mix-blend-mode:normal;
+  will-change:opacity,filter,transform;
+}
+.fogBleedN{
+  left:-7px; right:-7px; top:-12px; height:26px;
+  background:linear-gradient(180deg,rgba(0,0,0,.92) 0%,rgba(20,20,20,.58) 42%,rgba(40,40,40,.18) 72%,transparent 100%);
+}
+.fogBleedS{
+  left:-7px; right:-7px; bottom:-12px; height:26px;
+  background:linear-gradient(0deg,rgba(0,0,0,.92) 0%,rgba(20,20,20,.58) 42%,rgba(40,40,40,.18) 72%,transparent 100%);
+}
+.fogBleedW{
+  top:-7px; bottom:-7px; left:-12px; width:26px;
+  background:linear-gradient(90deg,rgba(0,0,0,.92) 0%,rgba(20,20,20,.58) 42%,rgba(40,40,40,.18) 72%,transparent 100%);
+}
+.fogBleedE{
+  top:-7px; bottom:-7px; right:-12px; width:26px;
+  background:linear-gradient(270deg,rgba(0,0,0,.92) 0%,rgba(20,20,20,.58) 42%,rgba(40,40,40,.18) 72%,transparent 100%);
+}
+.fogBleedNW{
+  left:-14px; top:-14px; width:34px; height:34px;
+  background:radial-gradient(circle at 0 0,rgba(0,0,0,.92),rgba(25,25,25,.45) 45%,transparent 74%);
+}
+.fogBleedNE{
+  right:-14px; top:-14px; width:34px; height:34px;
+  background:radial-gradient(circle at 100% 0,rgba(0,0,0,.92),rgba(25,25,25,.45) 45%,transparent 74%);
+}
+.fogBleedSW{
+  left:-14px; bottom:-14px; width:34px; height:34px;
+  background:radial-gradient(circle at 0 100%,rgba(0,0,0,.92),rgba(25,25,25,.45) 45%,transparent 74%);
+}
+.fogBleedSE{
+  right:-14px; bottom:-14px; width:34px; height:34px;
+  background:radial-gradient(circle at 100% 100%,rgba(0,0,0,.92),rgba(25,25,25,.45) 45%,transparent 74%);
+}
+.fogClearing .fogBleed,
+.fogReturning .fogBleed{
+  transition:opacity .36s ease, filter .36s ease;
+}
+
+
+/* FOG BLEED HOTFIX: keep sprites and wall textures clean */
+#entityLayer{
+  z-index:120!important;
+}
+.entityOverlay,
+.entityOverlay .spriteWrap,
+.entityOverlay .tileIcon,
+.entityEmoji{
+  z-index:121!important;
+}
+.fogClearing::after,
+.fogReturning::before,
+.fogSmoke::after{
+  z-index:24!important;
+}
+.fogBleedLayer{
+  z-index:26!important;
+}
+/* Bleed must be subtle: enough to soften the square border, not enough to cover tiles. */
+.fogBleed{
+  opacity:.46!important;
+  filter:blur(5px)!important;
+}
+.fogBleedN{left:-4px!important;right:-4px!important;top:-8px!important;height:18px!important;}
+.fogBleedS{left:-4px!important;right:-4px!important;bottom:-8px!important;height:18px!important;}
+.fogBleedW{top:-4px!important;bottom:-4px!important;left:-8px!important;width:18px!important;}
+.fogBleedE{top:-4px!important;bottom:-4px!important;right:-8px!important;width:18px!important;}
+.fogBleedNW,.fogBleedNE,.fogBleedSW,.fogBleedSE{
+  width:22px!important;
+  height:22px!important;
+  opacity:.32!important;
+}
+.fogBleedNW{left:-8px!important;top:-8px!important;}
+.fogBleedNE{right:-8px!important;top:-8px!important;}
+.fogBleedSW{left:-8px!important;bottom:-8px!important;}
+.fogBleedSE{right:-8px!important;bottom:-8px!important;}
+/* Extra safety: visible wall cells stay crisp. */
+.cell.wall:not(.fogSmoke):not(.rememberedWall)::after,
+.cell.wall:not(.fogSmoke):not(.rememberedWall)::before{
+  pointer-events:none;
+}
+
+
+/* COLD STONE MAIN MENU + INFINITE CORRIDOR PATCH */
+:root{
+  --coldStone:#56606e;
+  --coldStone2:#303947;
+  --coldDark:#0b1018;
+  --coldPanel:#141b25;
+  --coldLine:#7f8ea6;
+  --coldText:#dce7f5;
+  --coldMuted:#9caabe;
+  --coldGlow:#8fc7ff;
+}
+
+body{
+  background:
+    radial-gradient(circle at 50% 8%, rgba(118,154,194,.14), transparent 32%),
+    linear-gradient(180deg,#070a10 0%,#0b0f16 44%,#05070b 100%)!important;
+  color:var(--coldText)!important;
+}
+
+#menu{
+  overflow:hidden;
+  min-height:620px;
+  border-color:#68778e!important;
+  background:
+    linear-gradient(180deg,rgba(19,26,36,.94),rgba(7,10,15,.97)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 2px, transparent 2px 32px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 2px, transparent 2px 46px)!important;
+  box-shadow:
+    0 0 0 3px rgba(0,0,0,.86),
+    inset 0 0 55px rgba(0,0,0,.72),
+    inset 0 14px 0 rgba(255,255,255,.035),
+    0 22px 70px rgba(0,0,0,.78),
+    0 0 34px rgba(100,145,190,.16)!important;
+}
+#menu::before{
+  border-color:rgba(152,180,214,.25)!important;
+  box-shadow:inset 0 0 24px rgba(120,165,210,.08);
+}
+
+#menuDungeonBackdrop{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  overflow:hidden;
+  opacity:.95;
+}
+#menuDungeonBackdrop::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 28%, rgba(0,0,0,.22) 45%, rgba(0,0,0,.74) 100%),
+    radial-gradient(circle at 28% 50%, rgba(92,118,150,.12), transparent 34%),
+    radial-gradient(circle at 74% 48%, rgba(89,134,179,.11), transparent 31%);
+  z-index:6;
+}
+#menuDungeonBackdrop::after{
+  content:"";
+  position:absolute;
+  inset:-60px;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(190,215,240,.08), transparent 26%),
+    radial-gradient(circle at 70% 60%, rgba(190,215,240,.06), transparent 30%);
+  filter:blur(22px);
+  animation:menuFogDrift 11s linear infinite alternate;
+  z-index:7;
+}
+.runnerLane{
+  position:absolute;
+  left:50%;
+  top:58%;
+  width:780px;
+  height:310px;
+  transform:translate(-50%,-50%);
+  border-left:2px solid rgba(127,142,166,.18);
+  border-right:2px solid rgba(127,142,166,.18);
+  box-shadow:0 0 80px rgba(0,0,0,.65);
+  overflow:hidden;
+}
+.runnerFloor{
+  position:absolute;
+  left:0;right:0;top:96px;bottom:96px;
+  background:
+    linear-gradient(180deg,rgba(182,195,213,.10),transparent 18%,rgba(0,0,0,.18) 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1px, transparent 1px 52px),
+    #596474;
+  animation:corridorRun 1.6s linear infinite;
+}
+.runnerWall{
+  position:absolute;
+  left:0;right:0;height:96px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.16),rgba(0,0,0,.13)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.065) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.35) 0 2px, transparent 2px 42px),
+    #343d4b;
+  animation:corridorRun 1.6s linear infinite;
+}
+.runnerWallTop{top:0;border-bottom:6px solid rgba(9,12,18,.82);box-shadow:0 8px 18px rgba(0,0,0,.55);}
+.runnerWallBottom{bottom:0;border-top:6px solid rgba(0,0,0,.7);box-shadow:0 -8px 18px rgba(0,0,0,.55);}
+.menuRunner{
+  position:absolute;
+  left:50%;
+  top:49%;
+  width:76px;
+  height:76px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  transform:translate(-50%,-50%) scale(1.24);
+  z-index:5;
+  filter:drop-shadow(0 10px 6px rgba(0,0,0,.65));
+}
+.menuMist{
+  position:absolute;
+  width:460px;height:210px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(200,220,240,.10), transparent 68%);
+  filter:blur(20px);
+  z-index:8;
+}
+.mistA{left:8%;top:38%;animation:menuMistA 8s ease-in-out infinite alternate;}
+.mistB{right:5%;top:50%;animation:menuMistB 10s ease-in-out infinite alternate;}
+
+#menu > h1,
+#menu > button,
+#menu > #classSelect,
+#menu > #rulesBox,
+#menu > #bestiaryBox{
+  position:relative;
+  z-index:10;
+}
+#menu h1{
+  color:#e4edf8!important;
+  text-shadow:0 2px 0 #000,0 0 18px rgba(125,180,235,.55)!important;
+}
+#menu h2,#menu h3,
+#classSelect h2,#rulesBox h2,#bestiaryBox h2{
+  color:#d7e4f4!important;
+  text-shadow:0 2px 0 #000,0 0 13px rgba(100,155,220,.34)!important;
+}
+#menu #rulesBox,#menu #bestiaryBox,#menu #classSelect{
+  background:linear-gradient(180deg,rgba(21,29,40,.94),rgba(8,12,18,.96))!important;
+  border-color:rgba(130,153,184,.58)!important;
+  box-shadow:inset 0 0 28px rgba(0,0,0,.66), 0 0 25px rgba(0,0,0,.52), 0 0 18px rgba(100,150,210,.10)!important;
+}
+#menu p{color:#d1dbe9!important;}
+#menu b{color:#eef6ff!important;}
+
+#menu button,
+#menu .bigButton,
+#classSelect button{
+  color:#e9f3ff!important;
+  border-color:#6f7f96!important;
+  background:
+    linear-gradient(180deg,#667284 0%,#394454 45%,#151b24 100%)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(245,250,255,.24),
+    inset 0 -4px 0 rgba(0,0,0,.38),
+    0 3px 0 #05070a,
+    0 0 14px rgba(120,170,230,.12)!important;
+  text-shadow:0 2px 2px #000;
+}
+#menu button:hover,
+#classSelect button:hover{
+  border-color:#a9c4e7!important;
+  filter:brightness(1.15) saturate(1.08)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.36),
+    inset 0 -4px 0 rgba(0,0,0,.42),
+    0 4px 0 #05070a,
+    0 0 24px rgba(130,190,255,.35)!important;
+}
+#menu .bigButton{
+  background:
+    linear-gradient(180deg,#7f8fa5 0%,#48576a 45%,#1a222d 100%)!important;
+}
+
+@keyframes corridorRun{
+  from{background-position:0 0,0 0,0 0,0 0;}
+  to{background-position:0 80px,0 80px,0 0,0 0;}
+}
+@keyframes menuFogDrift{
+  from{transform:translate(-10px,-6px) scale(1.0);opacity:.55;}
+  to{transform:translate(18px,8px) scale(1.06);opacity:.8;}
+}
+@keyframes menuMistA{
+  from{transform:translateX(-40px);opacity:.24;}
+  to{transform:translateX(85px);opacity:.45;}
+}
+@keyframes menuMistB{
+  from{transform:translateX(50px);opacity:.18;}
+  to{transform:translateX(-80px);opacity:.38;}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .runnerFloor,.runnerWall,#menuDungeonBackdrop::after,.menuMist{animation:none!important;}
+}
+
+/* HOTFIX: unified cold stone UI for MENU + IN-GAME, no gold/PowerPoint metal */
+:root{
+  --stone-bg:#070a0f;
+  --stone-panel:#10161f;
+  --stone-panel-2:#161d28;
+  --stone-edge:#6f7b8d;
+  --stone-edge-soft:#3f4a5a;
+  --stone-text:#dce6f2;
+  --stone-muted:#9daabd;
+  --stone-accent:#9fc7f2;
+  --stone-danger:#743332;
+}
+
+html,body{
+  background:
+    radial-gradient(circle at 50% 10%, rgba(100,130,165,.13), transparent 30%),
+    linear-gradient(180deg,#070a0f,#05070b 65%,#030406)!important;
+  color:var(--stone-text)!important;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.22;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:64px 42px;
+  mask-image:linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent);
+  z-index:-1;
+}
+
+#menu,#game{
+  position:relative!important;
+  color:var(--stone-text)!important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(130,160,200,.09), transparent 34%),
+    linear-gradient(180deg,rgba(16,22,31,.96),rgba(5,7,11,.98)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 36px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 1px, transparent 1px 58px)!important;
+  border:2px solid var(--stone-edge-soft)!important;
+  border-radius:16px!important;
+  box-shadow:
+    0 0 0 3px #020305,
+    inset 0 0 0 1px rgba(205,225,245,.10),
+    inset 0 0 45px rgba(0,0,0,.72),
+    0 24px 70px rgba(0,0,0,.82),
+    0 0 28px rgba(120,160,210,.10)!important;
+}
+
+#game::before,#menu::before{
+  content:"";
+  position:absolute;
+  inset:8px;
+  border:1px solid rgba(150,170,200,.28)!important;
+  border-radius:12px;
+  pointer-events:none;
+  box-shadow:inset 0 0 26px rgba(0,0,0,.45);
+}
+
+#game h1,#menu h1{
+  color:#e5edf8!important;
+  text-shadow:0 3px 0 #000, 0 0 16px rgba(130,180,240,.36)!important;
+}
+
+#game h2,#game h3,#menu h2,#menu h3,
+#sidePanel h3,#panelTitle{
+  color:#d7e3f1!important;
+  text-shadow:0 2px 0 #000, 0 0 10px rgba(130,180,240,.22)!important;
+}
+
+#game p,#game span,#game div,#rulesBox,#bestiaryBox,#classSelect{
+  color:var(--stone-text)!important;
+}
+
+#game > p,
+#characterBox,
+#actionPanel,
+#log,
+#rulesBox,
+#bestiaryBox,
+#classSelect,
+.deathBox{
+  background:
+    linear-gradient(180deg,rgba(18,25,35,.94),rgba(7,10,15,.96))!important;
+  border:1px solid rgba(118,135,160,.55)!important;
+  border-radius:10px!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -14px 26px rgba(0,0,0,.30),
+    0 0 20px rgba(0,0,0,.45)!important;
+}
+
+#game > p{
+  display:inline-block;
+  padding:8px 14px;
+  margin:4px 0 8px;
+}
+
+#log{
+  color:#d8e2ef!important;
+  background:
+    linear-gradient(180deg,rgba(5,8,12,.95),rgba(1,2,4,.98))!important;
+}
+.logLine{border-bottom:1px solid rgba(160,185,215,.08)!important;}
+
+button,
+.bigButton,
+#game button,
+#menu button,
+#classSelect button{
+  color:#e7f0fb!important;
+  border:1px solid #677386!important;
+  border-radius:9px!important;
+  background:
+    linear-gradient(180deg,#4f5968 0%,#2b3441 46%,#111821 100%)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(240,250,255,.20),
+    inset 0 -3px 0 rgba(0,0,0,.42),
+    0 3px 0 #020305,
+    0 0 10px rgba(120,165,220,.08)!important;
+  text-shadow:0 2px 2px #000!important;
+  font-weight:700!important;
+}
+button:hover,
+.bigButton:hover,
+#game button:hover,
+#menu button:hover{
+  border-color:#a7c0df!important;
+  background:
+    linear-gradient(180deg,#657286 0%,#354355 48%,#121b27 100%)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    inset 0 -3px 0 rgba(0,0,0,.45),
+    0 4px 0 #020305,
+    0 0 18px rgba(130,180,240,.28)!important;
+  filter:none!important;
+}
+button:active,
+.bigButton:active{
+  transform:translateY(2px);
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,.65),
+    0 1px 0 #020305!important;
+}
+button.danger,.danger{
+  background:linear-gradient(180deg,#724040,#3d1d20 48%,#17090b 100%)!important;
+  border-color:#9b5d5c!important;
+  color:#ffe3e3!important;
+}
+
+#map{
+  border:2px solid #667489!important;
+  background:#020304!important;
+  box-shadow:
+    0 0 0 3px #020305,
+    0 0 28px rgba(0,0,0,.70),
+    0 0 22px rgba(120,160,210,.12)!important;
+}
+#mapFrame{
+  border:1px solid rgba(125,145,170,.40)!important;
+  background:#020304!important;
+  box-shadow:inset 0 0 24px rgba(0,0,0,.65), 0 0 22px rgba(0,0,0,.55)!important;
+}
+#sidePanel{
+  color:var(--stone-text)!important;
+}
+.slot{
+  background:linear-gradient(180deg,#1a2230,#0d121a)!important;
+  border-color:#5f6d82!important;
+}
+
+/* Menu runner: move corridor SIDEWAYS, not downward. More dungeon stone, less sci-fi metal. */
+#menuDungeonBackdrop{opacity:.92!important;}
+.runnerLane{
+  top:58%!important;
+  width:820px!important;
+  height:300px!important;
+  border-left:0!important;
+  border-right:0!important;
+  border-top:1px solid rgba(120,140,170,.12)!important;
+  border-bottom:1px solid rgba(120,140,170,.12)!important;
+}
+.runnerFloor{
+  top:102px!important;
+  bottom:102px!important;
+  background:
+    linear-gradient(180deg,rgba(195,205,220,.09),transparent 26%,rgba(0,0,0,.20) 100%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.24) 0 2px, transparent 2px 52px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 40px),
+    #555f70!important;
+  animation:corridorRunSide 1.15s linear infinite!important;
+}
+.runnerWall{
+  height:102px!important;
+  background:
+    linear-gradient(180deg,rgba(230,235,245,.12),rgba(0,0,0,.12)),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.35) 0 2px, transparent 2px 46px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.055) 0 1px, transparent 1px 28px),
+    #333d4d!important;
+  animation:corridorRunSide 1.15s linear infinite!important;
+}
+.runnerWallTop{border-bottom:7px solid rgba(5,7,11,.90)!important;}
+.runnerWallBottom{border-top:7px solid rgba(5,7,11,.90)!important;}
+.menuRunner{
+  top:50%!important;
+  transform:translate(-50%,-50%) scale(1.22)!important;
+}
+@keyframes corridorRunSide{
+  from{background-position:0 0,0 0,0 0,0 0;}
+  to{background-position:-104px 0,-104px 0,0 0,0 0;}
+}
+
+
+/* CUSTOM BLUE LIGHTBEACON PATCH — player's animated beacon + glow/flash */
+.bitcrawlTorchIcon{
+  width:58px!important;
+  height:58px!important;
+  transform:translate(-50%,-62%)!important;
+  image-rendering:pixelated;
+  object-fit:contain;
+  filter:
+    drop-shadow(0 0 5px rgba(120,180,255,.95))
+    drop-shadow(0 0 14px rgba(45,120,255,.65))
+    drop-shadow(0 4px 5px rgba(0,0,0,.85))!important;
+}
+.entity-L::before,.entity-B::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  width:78px;
+  height:78px;
+  transform:translate(-50%,-58%);
+  z-index:119;
+  pointer-events:none;
+  background:radial-gradient(circle, rgba(96,165,250,.34) 0%, rgba(59,130,246,.18) 34%, rgba(20,70,160,.08) 58%, transparent 76%);
+  filter:blur(2px);
+  animation:blueBeaconAura 1.55s ease-in-out infinite;
+}
+@keyframes blueBeaconAura{
+  0%,100%{opacity:.62; transform:translate(-50%,-58%) scale(.95);}
+  50%{opacity:.95; transform:translate(-50%,-58%) scale(1.08);}
+}
+.panelTitleIcon.torchMini{
+  width:30px!important;
+  height:30px!important;
+  object-fit:contain;
+  filter:drop-shadow(0 0 7px rgba(90,170,255,.9))!important;
+}
+.actionBtnIcon.torchMini{
+  width:24px!important;
+  height:24px!important;
+  object-fit:contain;
+  filter:drop-shadow(0 0 6px rgba(90,170,255,.9))!important;
+}
+.beaconFlashBurst{
+  position:absolute;
+  width:40px;
+  height:40px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:130;
+  background:radial-gradient(circle, rgba(235,250,255,.95) 0%, rgba(92,180,255,.58) 28%, rgba(37,99,235,.22) 54%, transparent 78%);
+  box-shadow:0 0 18px rgba(100,190,255,.95),0 0 42px rgba(45,120,255,.55);
+  animation:beaconFlashBurstAnim .58s ease-out forwards;
+}
+@keyframes beaconFlashBurstAnim{
+  0%{opacity:0; transform:translate(-50%,-50%) scale(.35); filter:blur(0px);}
+  18%{opacity:1;}
+  100%{opacity:0; transform:translate(-50%,-50%) scale(3.0); filter:blur(8px);}
+}
+.cell.beaconLitTile:not(.fogSmoke):not(.rememberedWall):not(.rememberedExit){
+  filter:brightness(1.12) saturate(1.1)!important;
+}
+.cell.beaconLitTile:not(.wall)::after{
+  background:radial-gradient(circle at center,rgba(90,170,255,.13),transparent 72%)!important;
+}
+
+/* CUSTOM MAGE PLAYER SPRITE */
+#playerOverlay .spriteWrap.mageSprite{
+  transform:translate(-50%,-77%) scaleX(var(--sprite-flip,1))!important;
+  filter:drop-shadow(0 4px 3px rgba(0,0,0,.72)) drop-shadow(0 0 8px rgba(85,130,255,.18))!important;
+}
+#playerOverlay .spriteWrap.mageSprite .spriteImg{
+  width:54px!important;
+  height:auto!important;
+  image-rendering:pixelated!important;
+}
+#playerOverlay.playerWalking .spriteWrap.mageSprite{
+  filter:drop-shadow(0 4px 3px rgba(0,0,0,.72)) drop-shadow(0 0 10px rgba(110,150,255,.22))!important;
+}

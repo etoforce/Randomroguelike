@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Пещерный Рогалик</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="menu">
+  <div id="menuDungeonBackdrop" aria-hidden="true"><div class="runnerLane"><div class="runnerWall runnerWallTop"></div><div class="runnerFloor"></div><div class="runnerWall runnerWallBottom"></div><img class="menuRunner" src="assets/soldier_walk.gif" alt=""></div><div class="menuMist mistA"></div><div class="menuMist mistB"></div></div>
+  <h1>Пещерный Рогалик</h1>
+  <button class="bigButton" onclick="showClassSelect()">В путь!</button>
+  <button onclick="loadGame()">Продолжить</button>
+  <button onclick="toggleRules()">Правила</button>
+  <button onclick="toggleBestiary()">Бестиарий</button>
+  <div id="classSelect">
+    <h2>Выбери класс</h2>
+    <p><b>Воин</b> — новичковый класс: 28 HP, броня снижает входящий урон на 1, но не ниже 1.</p>
+    <p><b>Маг</b> — мало HP, стабильный урон, создаёт 1 зелье за этаж за 20 золота, выбирает 2 бонуса уровня.</p>
+    <p><b>Убийца</b> — 18% крит и 18% уворот. Крит всегда наносит двойной максимальный урон.</p>
+    <button class="bigButton" onclick="startGame('warrior')">Воин</button>
+    <button class="bigButton" onclick="startGame('mage')">Маг</button>
+    <button class="bigButton" onclick="startGame('assassin')">Убийца</button>
+  </div>
+  <div id="rulesBox">
+    <h2>Правила</h2>
+    <p>Цель — пройти 10 уровней подземелья.</p>
+    <p>Выход 🕳️ имеет 3 стены вокруг и только 1 вход, который охраняет скелет или наёмник.</p>
+    <p>Туман войны развеивается на 2 клетки и не проходит через стены.</p>
+    <p>При переходе на новый уровень выбирается бесплатный бонус: обычные классы 1 из 3, маг 2 из 3.</p>
+    <p>У торговца отдельная комната. Он продаёт максимум 2 предмета на уровне. Второй купленный предмет стоит в 1.5 раза дороже.</p>
+    <p>Инвентарь: 4 слота под предметы. Можно носить любые предметы, даже одинаковые.</p>
+  </div>
+  <div id="bestiaryBox">
+    <h2>Бестиарий</h2>
+    <p><b>Скелет ☠️</b> — обычный враг, не подкупается.</p>
+    <p><b>Элитный скелет 💀</b> — усиленная версия, больше HP и урона.</p>
+    <p><b>Наёмник 🗡️</b> — меньше HP, но больше урон. Его можно подкупить.</p>
+    <p><b>Элитный наёмник ⚔️</b> — редкий усиленный наёмник, тоже может быть подкуплен, но дороже.</p>
+    <p><b>Охранник выхода</b> — стоит перед выходом, без него дальше не пройти.</p>
+  </div>
+</div>
+<div id="game">
+  <h1>Пещерный Рогалик</h1>
+  <p>
+    Уровень: <span id="level">1</span>/10 |
+    HP: <span id="hp">25</span>/<span id="maxHp">25</span> |
+    Урон: <span id="minDamage">4</span>-<span id="maxDamage">8</span> |
+    Золото: <span id="gold">0</span> |
+    Зелья: <span id="potions">0</span>/<span id="potionCap">3</span>
+  </p>
+  <button onclick="toggleControlLock()">Фикс управления: <span id="lockStatus">ВКЛ</span></button>
+  <button onclick="toggleCharacter()">Персонаж</button>
+  <button id="craftPotionButton" onclick="craftPotion()" style="display:none;">Создать зелье — 20 золота</button>
+
+  <div id="characterBox">
+    <div class="characterIcon">🧍</div>
+    <h3>Персонаж</h3>
+    <p>Класс: <span id="className">Воин</span></p>
+    <p>🔥 Факел: <span id="torchHealthText">50/100%</span> | Дальность: <span id="vision">2</span> | 👣 Действия: <span id="actionsText">0</span> | Уворот: <span id="dodge">10</span>% | Блок: <span id="block">0</span>%</p>
+    <p>Слоты инвентаря: <span id="invCount">0</span>/4</p>
+    <div id="inventoryText">Инвентарь пуст</div>
+  </div>
+  <div id="mainArea">
+    <div id="mapFrame"><div id="map"></div><div id="entityLayer"></div><div id="playerOverlay"></div></div>
+    <div id="sidePanel">
+      <h3>Лог</h3><div id="log"></div>
+      <div id="actionPanel"><h3 id="panelTitle"></h3><p id="panelInfo"></p><div id="panelButtons"></div></div>
+    </div>
+  </div>
+  <h3>Управление</h3>
+  <button onclick="move(0,-1)">⬆️</button><br>
+  <button onclick="move(-1,0)">⬅️</button><button onclick="move(1,0)">➡️</button><br>
+  <button onclick="move(0,1)">⬇️</button><br><br>
+  <button onclick="saveGame()">Сохранить</button>
+  <button onclick="loadGame()">Загрузить</button>
+  <button onclick="restartGame()">Начать заново</button>
+  <button class="danger" onclick="exitToMenu()">Выход в меню</button>
+</div>
+<script src="game.js"></script>
+<div id="deathScreen"><div class="deathBox"><h1>☠️ Ты погиб ☠️</h1><p>Подземелье оказалось сильнее...</p><button class="bigButton" onclick="restartFromDeath()">Начать заново</button><button class="danger" onclick="exitToMenu()">Выйти в меню</button></div></div></body>
+</html>
