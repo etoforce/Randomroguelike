@@ -2,18 +2,26 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Пещерный Рогалик</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="menu">
-  <div id="menuDungeonBackdrop" aria-hidden="true"><div class="runnerLane"><div class="runnerWall runnerWallTop"></div><div class="runnerFloor"></div><div class="runnerWall runnerWallBottom"></div><img class="menuRunner" src="assets/soldier_walk.gif" alt=""></div><div class="menuMist mistA"></div><div class="menuMist mistB"></div></div>
-  <h1>Пещерный Рогалик</h1>
-  <button class="bigButton" onclick="showClassSelect()">В путь!</button>
-  <button onclick="loadGame()">Продолжить</button>
-  <button onclick="toggleRules()">Правила</button>
-  <button onclick="toggleBestiary()">Бестиарий</button>
+  <div id="menuDungeonBackdrop" aria-hidden="true"><div class="runnerLane"><div class="runnerWall runnerWallTop"><div class="wallTileBelt"></div></div><div class="runnerFloor"><div class="floorTileBelt"></div></div><div class="runnerChaseFog"><i class="warFogCloud warFogCloudA"></i><i class="warFogCloud warFogCloudB"></i><i class="warFogCloud warFogCloudC"></i></div><img class="menuRunner" src="assets/soldier_walk.gif" alt=""></div><div class="menuMist mistA"></div><div class="menuMist mistB"></div></div>
+  <div class="menuUi">
+    <h1>Пещерный<br>Рогалик</h1>
+    <p class="menuSubtitle">Спустись туда, откуда не возвращаются прежними.</p>
+    <div class="menuActions">
+      <button class="bigButton" onclick="showClassSelect()">В путь!</button>
+      <button class="tutorialButton" onclick="startTutorial()">Обучение</button>
+      <button onclick="loadGame()">Продолжить</button>
+      <button onclick="toggleRules()">Правила</button>
+      <button onclick="toggleBestiary()">Бестиарий</button>
+    </div>
+  </div>
   <div id="classSelect">
+    <button class="menuPanelClose" onclick="closeClassSelect()" aria-label="Закрыть">×</button>
     <h2>Выбери класс</h2>
     <p><b>Воин</b> — новичковый класс: 28 HP, броня снижает входящий урон на 1, но не ниже 1.</p>
     <p><b>Маг</b> — мало HP, стабильный урон, создаёт 1 зелье за этаж за 20 золота, выбирает 2 бонуса уровня.</p>
@@ -23,6 +31,7 @@
     <button class="bigButton" onclick="startGame('assassin')">Убийца</button>
   </div>
   <div id="rulesBox">
+    <button class="menuPanelClose" onclick="toggleRules()" aria-label="Закрыть">×</button>
     <h2>Правила</h2>
     <p>Цель — пройти 10 уровней подземелья.</p>
     <p>Выход 🕳️ имеет 3 стены вокруг и только 1 вход, который охраняет скелет или наёмник.</p>
@@ -32,6 +41,7 @@
     <p>Инвентарь: 4 слота под предметы. Можно носить любые предметы, даже одинаковые.</p>
   </div>
   <div id="bestiaryBox">
+    <button class="menuPanelClose" onclick="toggleBestiary()" aria-label="Закрыть">×</button>
     <h2>Бестиарий</h2>
     <p><b>Скелет ☠️</b> — обычный враг, не подкупается.</p>
     <p><b>Элитный скелет 💀</b> — усиленная версия, больше HP и урона.</p>
@@ -53,6 +63,12 @@
   <button onclick="toggleCharacter()">Персонаж</button>
   <button id="craftPotionButton" onclick="craftPotion()" style="display:none;">Создать зелье — 20 золота</button>
 
+  <div id="tutorialPanel" aria-live="polite">
+    <div class="tutorialHeader"><span id="tutorialStepLabel">Обучение</span><button onclick="exitTutorial()">Выйти из обучения</button></div>
+    <h2 id="tutorialTitle">Первый шаг</h2>
+    <p id="tutorialText"></p>
+  </div>
+
   <div id="characterBox">
     <div class="characterIcon">🧍</div>
     <h3>Персонаж</h3>
@@ -69,6 +85,7 @@
     </div>
   </div>
   <h3>Управление</h3>
+  <p id="controlHint">Стрелки двигают героя и поворачивают его к объектам. Действия с врагами, сундуками и торговцем появляются справа от карты.</p>
   <button onclick="move(0,-1)">⬆️</button><br>
   <button onclick="move(-1,0)">⬅️</button><button onclick="move(1,0)">➡️</button><br>
   <button onclick="move(0,1)">⬇️</button><br><br>

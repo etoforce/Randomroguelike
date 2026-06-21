@@ -25,6 +25,8 @@ const MOVE_DELAY_MS = 190;
 let bonusStock = [], pendingBonusChoices = 0, inventory = [];
 let magePotionCraftedThisLevel = false;
 let isLoadingGame = false;
+let tutorialMode = false;
+let tutorialStep = 0;
 let playerSpriteState = 'idle';
 let monsterSpriteStates = {};
 let spriteResetTimer = null;
@@ -32,6 +34,52 @@ let mapCells = [];
 let mapGridReady = false;
 const TILE_SIZE = 40;
 const MAX_LOG_LINES = 60;
+
+function buildMenuFloorBelt(){
+ const belt=document.querySelector('.floorTileBelt');
+ if(!belt||belt.children.length)return;
+ const plain='assets/tile_floor.png';
+ const variants=['assets/tile_floor_crack_a.png','assets/tile_floor_crack_b.png','assets/tile_floor_worn.png'];
+ const rows=10,columns=34;
+ for(let panelIndex=0;panelIndex<2;panelIndex++){
+  const panel=document.createElement('div');
+  panel.className='floorTilePanel';
+  for(let row=0;row<rows;row++){
+   for(let column=0;column<columns;column++){
+    const marker=(row*17+column*11)%31;
+    const img=document.createElement('img');
+    img.src=marker===0?variants[0]:marker===9?variants[1]:marker===19?variants[2]:plain;
+    img.alt='';
+    img.draggable=false;
+    panel.appendChild(img);
+   }
+  }
+  belt.appendChild(panel);
+ }
+}
+
+function buildMenuWallBelt(){
+ const belt=document.querySelector('.wallTileBelt');
+ if(!belt||belt.children.length)return;
+ const plain='assets/tile_wall_light.png';
+ const variants=['assets/tile_wall_light_crack.png','assets/tile_wall_light_worn.png'];
+ const rows=4,columns=34;
+ for(let panelIndex=0;panelIndex<2;panelIndex++){
+  const panel=document.createElement('div');
+  panel.className='wallTilePanel';
+  for(let row=0;row<rows;row++){
+   for(let column=0;column<columns;column++){
+    const marker=(row*13+column*7)%37;
+    const img=document.createElement('img');
+    img.src=marker===0?variants[0]:marker===17?variants[1]:plain;
+    img.alt='';
+    img.draggable=false;
+    panel.appendChild(img);
+   }
+  }
+  belt.appendChild(panel);
+ }
+}
 
 // Баланс сложности этажей. Бюджет определяет сколько врагов может появиться на этаже.
 // Важно: враги теперь имеют честный диапазон урона min-max, а не старое 1-X.
@@ -160,10 +208,15 @@ function log(text){
  }
  box.scrollTop=box.scrollHeight;
 }
-function toggleRules(){const b=document.getElementById('rulesBox'); b.style.display=b.style.display==='block'?'none':'block'; document.getElementById('bestiaryBox').style.display='none';}
-function toggleBestiary(){const b=document.getElementById('bestiaryBox'); b.style.display=b.style.display==='block'?'none':'block'; document.getElementById('rulesBox').style.display='none'; renderDifficultyTable();}
-function showClassSelect(){document.getElementById('classSelect').style.display='block'; document.getElementById('rulesBox').style.display='none'; document.getElementById('bestiaryBox').style.display='none';}
-function exitToMenu(){hideDeathScreen();gameStarted=false;gameOver=false;pendingFatalDamage=null;pendingBonusChoices=0;beaconUsed=false;beaconExists=false;fountainUsed=false;fountainExists=false;revealFogActive=false;if(beaconRevealTimer){clearTimeout(beaconRevealTimer);beaconRevealTimer=null;}chestOpeningCells=new Set();resetFogMemory();hideActionPanel();document.getElementById('game').style.display='none';document.getElementById('menu').style.display='block';document.getElementById('classSelect').style.display='none';}
+function updateMenuPanelState(){
+ const open=['classSelect','rulesBox','bestiaryBox'].some(id=>document.getElementById(id).style.display==='block');
+ document.getElementById('menu').classList.toggle('menu-panel-open',open);
+}
+function toggleRules(){const b=document.getElementById('rulesBox'); b.style.display=b.style.display==='block'?'none':'block'; document.getElementById('bestiaryBox').style.display='none';document.getElementById('classSelect').style.display='none';updateMenuPanelState();}
+function toggleBestiary(){const b=document.getElementById('bestiaryBox'); b.style.display=b.style.display==='block'?'none':'block'; document.getElementById('rulesBox').style.display='none';document.getElementById('classSelect').style.display='none'; renderDifficultyTable();updateMenuPanelState();}
+function showClassSelect(){document.getElementById('classSelect').style.display='block'; document.getElementById('rulesBox').style.display='none'; document.getElementById('bestiaryBox').style.display='none';updateMenuPanelState();}
+function closeClassSelect(){document.getElementById('classSelect').style.display='none';updateMenuPanelState();}
+function exitToMenu(){hideDeathScreen();gameStarted=false;gameOver=false;tutorialMode=false;tutorialStep=0;document.body.classList.remove('tutorial-mode');document.getElementById('tutorialPanel').style.display='none';pendingFatalDamage=null;pendingBonusChoices=0;beaconUsed=false;beaconExists=false;fountainUsed=false;fountainExists=false;revealFogActive=false;if(beaconRevealTimer){clearTimeout(beaconRevealTimer);beaconRevealTimer=null;}chestOpeningCells=new Set();resetFogMemory();hideActionPanel();document.getElementById('game').style.display='none';document.getElementById('menu').style.display='block';document.getElementById('classSelect').style.display='none';document.getElementById('rulesBox').style.display='none';document.getElementById('bestiaryBox').style.display='none';updateMenuPanelState();}
 function updateStats(){
  clampDamageStats();
  document.getElementById('level').textContent=level; document.getElementById('hp').textContent=Math.floor(hp); document.getElementById('maxHp').textContent=Math.floor(maxHp);
@@ -187,7 +240,55 @@ function renderInventorySlots(){
  }
  return html;
 }
-function startGame(cls='warrior'){playerClass=cls;document.getElementById('classSelect').style.display='none';document.getElementById('menu').style.display='none';document.getElementById('game').style.display='block';restartGame();}
+function startGame(cls='warrior'){tutorialMode=false;tutorialStep=0;document.body.classList.remove('tutorial-mode');document.getElementById('tutorialPanel').style.display='none';playerClass=cls;document.getElementById('classSelect').style.display='none';document.getElementById('menu').style.display='none';document.getElementById('game').style.display='block';restartGame();}
+
+function startTutorial(){
+ tutorialMode=true;
+ tutorialStep=0;
+ playerClass='warrior';
+ document.body.classList.add('tutorial-mode');
+ document.getElementById('classSelect').style.display='none';
+ document.getElementById('menu').style.display='none';
+ document.getElementById('game').style.display='block';
+ document.getElementById('tutorialPanel').style.display='block';
+ restartGame();
+}
+
+function exitTutorial(){exitToMenu();}
+
+const TUTORIAL_STEPS = [
+ {title:'Движение',text:'Нажимай стрелки на клавиатуре или кнопки снизу. Иди вправо по освещённому коридору.'},
+ {title:'Сундук',text:'Подойди к сундуку вплотную и повернись к нему стрелкой. Действие появится справа.'},
+ {title:'Открой сундук',text:'Нажми «Открыть сундук» в панели действий и забери золото.'},
+ {title:'Первый враг',text:'Иди дальше. Остановись перед скелетом: наступить на врага нельзя, нужно повернуться к нему.'},
+ {title:'Бой',text:'Используй атаки справа. Рубящий удар надёжен, оглушение может отменить ответ врага, колющий удар способен критовать.'},
+ {title:'Зелье',text:'Пройди дальше и наступи на зелье. Оно лечит 15 HP и хранится в запасе.'},
+ {title:'Выход',text:'Доберись до фиолетового выхода. В обычной игре он ведёт на следующий из 10 этажей.'},
+ {title:'Обучение завершено',text:'Ты освоил движение, взаимодействие, бой и предметы. Теперь можно начать настоящее прохождение.'}
+];
+
+function setTutorialStep(step){
+ tutorialStep=Math.max(tutorialStep,step);
+ updateTutorialPanel();
+}
+
+function updateTutorialPanel(){
+ if(!tutorialMode)return;
+ let data=TUTORIAL_STEPS[tutorialStep]||TUTORIAL_STEPS[0];
+ document.getElementById('tutorialStepLabel').textContent=tutorialStep>=7?'Готово':'Шаг '+(tutorialStep+1)+' из 7';
+ document.getElementById('tutorialTitle').textContent=data.title;
+ document.getElementById('tutorialText').textContent=data.text;
+}
+
+function finishTutorial(){
+ gameOver=true;
+ tutorialStep=7;
+ updateTutorialPanel();
+ document.getElementById('actionPanel').style.display='block';
+ document.getElementById('panelTitle').textContent='Обучение пройдено';
+ document.getElementById('panelInfo').textContent='Ты готов к настоящему подземелью.';
+ document.getElementById('panelButtons').innerHTML='<button class="bigButton" onclick="exitTutorial();showClassSelect()">Выбрать класс</button><button onclick="startTutorial()">Повторить</button>';
+}
 function setupClassStats(){
  if(playerClass==='warrior'){
   hp=28;
@@ -489,6 +590,7 @@ function generateMapOnce(){
 
 function generateMap(){
  resetMapGrid();
+ if(tutorialMode){generateTutorialMap();return;}
  for(let attempt=1; attempt<=70; attempt++){
   let exitPlaced = generateMapOnce();
   if(exitPlaced && validateGeneratedMap()){
@@ -501,6 +603,21 @@ function generateMap(){
   if(exitPlaced && validateGeneratedMap()) return;
  }
  log('⚠️ Генерация не смогла найти идеальный выход. Нажми Начать заново, если выход не появился.');
+}
+
+function generateTutorialMap(){
+ map=[];monsters={};chestOpeningCells=new Set();shopStock=[];merchantExists=false;resetFogMemory();merchantPurchases=0;pendingFatalDamage=null;beaconUsed=false;beaconExists=false;fountainUsed=false;fountainExists=false;revealFogActive=false;hideActionPanel();
+ for(let y=0;y<size;y++){map[y]=[];for(let x=0;x<size;x++)map[y][x]='#';}
+ for(let x=1;x<=9;x++)map[1][x]='.';
+ map[2][7]='.';map[2][8]='.';
+ player={x:1,y:1};playerUnderTile='.';map[1][1]='@';
+ map[1][3]='C';
+ createSkeleton(5,1,false,false,false);
+ monsters[key(5,1)].hp=6;monsters[key(5,1)].maxHp=6;
+ map[1][7]='+';
+ map[1][9]='>';
+ torchHealth=100;maxTorchHealth=100;clampTorch();
+ rememberVisibleCells();
 }
 function getFloorBudget(){
  return FLOOR_DIFFICULTY_BUDGET[level] || (26 + (level-10)*3);
@@ -727,11 +844,6 @@ function carveCorridorNoDestroyForBeacon(x1, y1, x2, y2) {
 
     return true;
 }
-
-function placeBeacon(path) {
-    return placeBeaconRoom(path);
-}
-
 
 function placeBeacon(path) {
     if (typeof beaconUsed === 'undefined') window.beaconUsed = false;
@@ -1232,6 +1344,7 @@ function drawMap(){
  renderEntityLayer();
  updatePlayerOverlay();
  updateActionPanel();
+ updateTutorialPanel();
 }
 
 function move(dx,dy){
@@ -1251,6 +1364,7 @@ function move(dx,dy){
  if(target==='M'){
   let m=monsters[key(nx,ny)];
   log('Перед тобой '+m.name+'. HP: '+m.hp+'/'+m.maxHp);
+  if(tutorialMode&&tutorialStep===3)setTutorialStep(4);
   lastMoveDir={x:0,y:0};
   drawMap();
   return;
@@ -1263,12 +1377,14 @@ function move(dx,dy){
  }
  if(target==='C'){
   log('Перед тобой старый сундук.');
+  if(tutorialMode&&tutorialStep===1)setTutorialStep(2);
   lastMoveDir={x:0,y:0};
   drawMap();
   return;
  }
  if(target==='+'){pickPotion();target='.';}
- if(target==='>'){
+  if(target==='>'){
+  if(tutorialMode){finishTutorial();return;}
   nextLevel();
   return;
  }
@@ -1280,6 +1396,11 @@ function move(dx,dy){
  map[player.y][player.x]='@';
  scheduleMoveVisualReset();
  registerAction();
+ if(tutorialMode&&tutorialStep===0)setTutorialStep(1);
+ if(tutorialMode&&tutorialStep===5&&target==='.'){
+  // Подбор зелья меняет target на пол до этого места.
+  if(potions>0)setTutorialStep(6);
+ }
  updateStats();
  drawMap();
 }
@@ -1297,6 +1418,7 @@ function openChestAt(chest){
   log('Сундук распахнулся. Найдено '+coins+' золота.');
   if(map[chest.y]&&map[chest.y][chest.x]==='C')map[chest.y][chest.x]='.';
   chestOpeningCells.delete(k);
+  if(tutorialMode&&tutorialStep===2)setTutorialStep(3);
   updateStats();
   drawMap();
  },620);
@@ -1469,10 +1591,12 @@ function attack(type){
    let reward=monster.elite?random(35,60):monster.strong?random(18,35):random(6,16);
    gold+=reward;
    log(monster.name+' убит. +'+reward+' золота.');
+   if(tutorialMode&&tutorialStep===4)setTutorialStep(5);
    updateStats();
-   drawMap();
-   combatBusy=false;
-  },330);
+  drawMap();
+  combatBusy=false;
+  updateTutorialPanel();
+ },330);
   return;
  }
  if(!enemyCanCounter){
@@ -1568,10 +1692,11 @@ function generateBonusStock(){const pool=[{name:'Мин. урон +1',type:'minD
 function showBonusPanel(){document.getElementById('actionPanel').style.display='block';document.getElementById('panelTitle').textContent='Бонус нового уровня';document.getElementById('panelInfo').textContent='Выбери бонус. Осталось выборов: '+pendingBonusChoices;let html='';for(let i=0;i<bonusStock.length;i++)html+=`<button onclick="takeLevelBonus(${i})">${bonusStock[i].name}</button><br>`;document.getElementById('panelButtons').innerHTML=html;}
 function takeLevelBonus(index){let item=bonusStock[index];if(!item||pendingBonusChoices<=0)return;applyBonus(item);bonusStock.splice(index,1);pendingBonusChoices--;updateStats();if(pendingBonusChoices<=0){hideActionPanel();drawMap();}else showBonusPanel();}
 function applyBonus(item){if(item.type==='minDmg'){minDamage++;log('Бонус: мин. урон +1.');}if(item.type==='maxDmg'){maxDamage++;log('Бонус: макс. урон +1.');}if(item.type==='maxHp'){maxHp+=5;hp+=5;log('Бонус: Max HP +5.');}if(item.type==='potion'){if(potions<potionCapacity){potions++;log('Бонус: зелье лечения.');}else log('Зелья полные, бонус сгорел.');}if(item.type==='vision'||item.type==='torchMax'){maxTorchHealth+=25;torchHealth+=25;clampTorch();log('Бонус: максимальный запас факела +25%.');}if(item.type==='dodge'){dodgeChance+=5;log('Бонус: уворот +5%.');}if(item.type==='potionCap'){potionCapacity++;log('Бонус: место для зелий +1.');}clampDamageStats();}
-function nextLevel(){if(level>=10){gameOver=true;log('<b>Ты прошел 10 уровней. Победа.</b>');return;}level++;magePotionCraftedThisLevel=false;if(playerClass==='warrior'){maxHp+=2;hp+=2;minDamage+=0.5;clampDamageStats();log('Воин: +2 Max HP, +0.5 min damage.');}log('<hr>Уровень '+level+'. Враги сильнее.');generateMap();pendingBonusChoices=playerClass==='mage'?2:1;generateBonusStock();updateStats();drawMap();showBonusPanel();}
+function nextLevel(){if(tutorialMode){finishTutorial();return;}if(level>=10){gameOver=true;log('<b>Ты прошел 10 уровней. Победа.</b>');return;}level++;magePotionCraftedThisLevel=false;if(playerClass==='warrior'){maxHp+=2;hp+=2;minDamage+=0.5;clampDamageStats();log('Воин: +2 Max HP, +0.5 min damage.');}log('<hr>Уровень '+level+'. Враги сильнее.');generateMap();pendingBonusChoices=playerClass==='mage'?2:1;generateBonusStock();updateStats();drawMap();showBonusPanel();}
 
 function saveGame(silent=false){
  if(!gameStarted)return;
+ if(tutorialMode){if(!silent)log('Обучение не занимает слот сохранения.');return;}
  const saveData={
   version:1,
   visionRange,torchHealth,maxTorchHealth,actionCounter,discoveredWalls:[...discoveredWalls],discoveredExits:[...discoveredExits],litCells:[...litCells],dodgeChance,blockChance,playerClass,classCritChance,critMultiplier,
@@ -1595,6 +1720,7 @@ function loadGame(){
  if(!raw){alert('Сохранения нет.');return;}
  try{
   isLoadingGame=true;
+  tutorialMode=false;tutorialStep=0;document.body.classList.remove('tutorial-mode');document.getElementById('tutorialPanel').style.display='none';
   const s=JSON.parse(raw);
   visionRange=s.visionRange ?? 2;
   torchHealth=s.torchHealth ?? 50;
@@ -1681,5 +1807,8 @@ function renderDifficultyTable(){
 }
 
 function restartGame(){
-hideDeathScreen();level=1;gold=0;potions=0;torchHealth=50;maxTorchHealth=100;actionCounter=0;clampTorch();potionCapacity=3;blockChance=0;inventory=[];gameOver=false;gameStarted=true;pendingFatalDamage=null;pendingBonusChoices=0;beaconUsed=false;beaconExists=false;fountainUsed=false;fountainExists=false;revealFogActive=false;if(beaconRevealTimer){clearTimeout(beaconRevealTimer);beaconRevealTimer=null;}shopStock=[];chestOpeningCells=new Set();merchantPurchases=0;facing={x:0,y:1};spriteFacingX=1;lastMoveDir={x:0,y:0};movementBusy=false;combatBusy=false;playerSpriteState='idle';monsterSpriteStates={};setupClassStats();document.getElementById('log').innerHTML='';generateMap();updateStats();drawMap();log('Игра началась.');}
+hideDeathScreen();level=1;gold=0;potions=0;torchHealth=tutorialMode?100:50;maxTorchHealth=100;actionCounter=0;clampTorch();potionCapacity=3;blockChance=0;inventory=[];gameOver=false;gameStarted=true;pendingFatalDamage=null;pendingBonusChoices=0;beaconUsed=false;beaconExists=false;fountainUsed=false;fountainExists=false;revealFogActive=false;if(beaconRevealTimer){clearTimeout(beaconRevealTimer);beaconRevealTimer=null;}shopStock=[];chestOpeningCells=new Set();merchantPurchases=0;facing={x:1,y:0};spriteFacingX=1;lastMoveDir={x:0,y:0};movementBusy=false;combatBusy=false;playerSpriteState='idle';monsterSpriteStates={};setupClassStats();document.getElementById('log').innerHTML='';generateMap();updateStats();drawMap();log(tutorialMode?'Обучение началось. Следуй подсказкам сверху.':'Игра началась.');updateTutorialPanel();}
 document.addEventListener('keydown',function(event){if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)){if(controlLock)event.preventDefault();if(event.key==='ArrowUp')move(0,-1);if(event.key==='ArrowDown')move(0,1);if(event.key==='ArrowLeft')move(-1,0);if(event.key==='ArrowRight')move(1,0);}});
+buildMenuFloorBelt();
+buildMenuWallBelt();
+document.getElementById('menu')?.classList.add('corridor-ready');
